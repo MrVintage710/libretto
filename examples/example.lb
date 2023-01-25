@@ -1,0 +1,52 @@
+//Comments are done with double slash
+
+//You can request data from the runtime with the request keyword. If the resource isn't available, then the execution fails.
+request status;
+request player;
+
+//This is a 'Logic' Block. This is where the logic of the script takes place
+<
+
+let test = rand(1..2);
+
+if test == 1 {
+  print("1 was rolled.")
+} else {
+  print("2 was rolled.")
+}
+
+>
+
+//This is a Dialog. It defines a sequence of lines that make up a scene.
+start {
+  //Inside of Dialogs, you denote a new line with the '|' character. What follows is what will appear in one line of dialog.
+  | "Jake: This is a line from jake. As long as you don't press enter, this line is here."
+
+  //You can put logic blocks in a line to define behavior
+  | <if status.guild_member == false> "Jake: You can't come here, you aren't part of the team! #angry"
+    <else> "Come on in <player.name>! What Can I help you with?"
+    
+    //Responses are denoted with '->'. They are followed by the response text, and then they are followed by another dialog. In this case,
+    //this dialog is linking to the 'shop' dialog defined later in the script.
+    -> "I would like to look at your wares!" shop
+    -> "Nevermind, I need to go." {
+      | "Jake: No problem! I will see you when next you visit." <end>
+    }
+}
+
+shop {
+  | "Sure, let me know if anything catches your eye." <event show_shop>
+}
+
+==========================================================================================
+Tokens: 
+
+Request "request"
+Line ""[*]*""
+Logic "<[*]*>
+Comment "//[*]*\n"
+semi-colon ";"
+Group_start "{"
+Group-end "}"
+New Line "|"
+Response "->"
