@@ -1,0 +1,18 @@
+//Comments are done with double slash
+
+request status;
+request player;
+
+start {
+  | Jake "This is a line from jake. As long as you don't press enter, this line is here."
+  | <if status.team_member == false> "You can't come here, you arent part of the team!"
+    <else> "Come on in <player.name>!"
+    -> "A Response Text" {
+      
+    }
+}
+
+shop {
+  | "This is a "
+}
+
