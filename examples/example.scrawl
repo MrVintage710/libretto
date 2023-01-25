@@ -3,9 +3,16 @@
 request status;
 request player;
 
+<
+
+let test = rand(1..2);
+
+>
+
 start {
   | "Jake: This is a line from jake. As long as you don't press enter, this line is here."
-  | <if status.team_member == false> "Jake: You can't come here, you arent part of the team!"
+  | <let talked_to_jake = true>
+    <if status.team_member == false> "Jake: You can't come here, you arent part of the team!"
     <else> "Come on in <player.name>!"
     -> "A Response Text" {
       
