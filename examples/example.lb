@@ -1,41 +1,99 @@
 //Comments are done with double slash
 
-//You can request data from the runtime with the request keyword. If the resource isn't available, then the execution fails.
-request status;
-request player;
-
 //This is a 'Logic' Block. This is where the logic of the script takes place
 <
 
-let test = rand(1..2);
+//Any logic component only shares state with other logic blocks within it's line.
+//The Only exception are logic blocks that are declared outside of a dialog.
+//These blocks are considered global and will run when the script starts
 
-if test == 1 {
-  print("1 was rolled.")
-} else {
-  print("2 was rolled.")
+//You can request data from the runtime with the request keyword. If the resource isn't available, then the execution fails.
+request status;
+
+//Requests can have default values and not panic if the resource is not found.
+request player ? false;
+
+//There are int's
+let int_var = 1;
+
+//float's
+let float_var = 3.1415;
+
+//bool's
+let bool_var = false;
+
+//Strings
+let string_var = "value"
+
+//arrays
+let array_var = [1, 2, 3, 4]
+
+//structs
+let struct_var = {
+  key : "value"
 }
 
+//functions
+let func_var = () {
+  print("hello world")
+}
+
+//or you can declare functions like
+function sum(a : int, b : int) : int {
+  return a + b;
+}
+
+//control flow
+if true {
+  print("This always")
+} else {
+  print("This never")
+}
+
+//Loops
+for i in 1..10 {
+  print("this will print 10 times")
+}
+
+while false {
+  print("This wil never print.")
+}
+
+//Default functions
+
+wait(time : float) //Stops the thread for 'time' seconds
+
+wait_milli(time : int) //Stops the thread for 'time' milliseconds
+
+end([message : string]) //Ends the runtime, returning a conditional message
+
+event(name : String, [contents : any]) //emits an event for the runtime. Content
+
+print(message : String) //prints to the log
 >
 
 //This is a Dialog. It defines a sequence of lines that make up a scene.
 start {
-  //Inside of Dialogs, you denote a new line with the '|' character. What follows is what will appear in one line of dialog.
-  | "Jake: This is a line from jake. As long as you don't press enter, this line is here."
+  // Inside of Dialogs, you denote a new line with the '|' character. 
+  // What follows is what will appear in one line of dialog.
+  | :Jake "This is a line from jake. As long as you don't press enter, this line is here."
 
   //You can put logic blocks in a line to define behavior
-  | <if status.guild_member == false> "Jake: You can't come here, you aren't part of the team! #angry"
+  | :Jake 
+    <if status.guild_member == false> "You can't come `(bold, wavy) here`, you aren't part of the team!" #angry 
     <else> "Come on in <player.name>! What Can I help you with?"
     
     //Responses are denoted with '->'. They are followed by the response text, and then they are followed by another dialog. In this case,
     //this dialog is linking to the 'shop' dialog defined later in the script.
     -> "I would like to look at your wares!" shop
     -> "Nevermind, I need to go." {
-      | "Jake: No problem! I will see you when next you visit." <end>
+      | "Jake: No problem! I will see you when next you visit." <end()>
     }
 }
 
 shop {
-  | "Sure, let me know if anything catches your eye." <event show_shop>
+  | "Sure, let me know if anything catches your eye." <event show_shop> <yield>
+    -- start
 }
 
 ==========================================================================================
@@ -50,3 +108,4 @@ Group_start "{"
 Group-end "}"
 New Line "|"
 Response "->"
+Question Mark "?"
