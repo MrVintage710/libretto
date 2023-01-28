@@ -19,7 +19,7 @@ fn main() {
         
     }
 
-    let mut logic_lex = LibrettoLogicToken::lexer("let float_var = \"Test\"");
+    let mut logic_lex = LibrettoLogicToken::lexer("let float_var = 3.14 + 10");
 
     for token in logic_lex {
         println!("{:?}", token);

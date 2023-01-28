@@ -1,5 +1,9 @@
 use logos::{Logos, Lexer};
 
+//==================================================================================================
+//          Libretto Token - Top Level Lexing
+//==================================================================================================
+
 fn content_after_first(lex : &mut Lexer<LibrettoToken>) -> String {
   lex.slice()[1..].to_string()
 }
@@ -52,6 +56,10 @@ pub enum LibrettoToken {
   Error
 }
 
+//==================================================================================================
+//          Libretto Logic Token - Logic Level Lexing
+//==================================================================================================
+
 fn lex_string(lex : &mut Lexer<LibrettoLogicToken>) -> String {
   let content = lex.slice();
   content[1..content.len()-1].to_string()
@@ -74,13 +82,13 @@ fn lex_float(lex : &mut Lexer<LibrettoLogicToken>) -> f64 {
 #[derive(Debug, Logos)]
 pub enum LibrettoLogicToken {
 
-  #[regex("[a-zA-Z1-9_]+", lex_text, priority=1)]
+  #[regex("[a-zA-Z0-9_]+", lex_text, priority=1)]
   Text(String),
 
-  #[regex("[1-9]+", lex_int, priority=2)]
+  #[regex("[0-9]+", lex_int, priority=2)]
   IntLiteral(i64),
 
-  #[regex("[1-9]+.[1-9]+", lex_float, priority=3)]
+  #[regex("[0-9]+.[0-9]+", lex_float, priority=3)]
   FloatLiteral(f64),
 
   #[regex("\"([^\"]*)\"", lex_string)]
@@ -119,9 +127,6 @@ pub enum LibrettoLogicToken {
   #[token("bool")]
   Bool,
 
-  #[token("=")]
-  Equals,
-
   #[token("{")]
   LeftCurlyBracket,
 
@@ -143,8 +148,41 @@ pub enum LibrettoLogicToken {
   #[token(".")]
   Period,
 
+  #[token(",")]
+  Comma,
+
   #[token(":")]
   Colon,
+
+  #[token("==", priority=2)]
+  Equality,
+
+  #[token("<=", priority=2)]
+  LessThanEquality,
+
+  #[token(">=", priority=2)]
+  GreaterThanEquality,
+
+  #[token("<")]
+  LessThan,
+
+  #[token(">")]
+  GreaterThan,
+
+  #[token("+")]
+  Add,
+
+  #[token("-")]
+  Sub,
+
+  #[token("*")]
+  Mult,
+
+  #[token("/")]
+  Div,
+
+  #[token("=")]
+  Equals,
 
   #[regex(r"[ \t\n\f]+", logos::skip)]
   Whitespace,
