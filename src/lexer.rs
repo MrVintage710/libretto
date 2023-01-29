@@ -4,17 +4,24 @@ use logos::{Logos, Lexer};
 //          Libretto Token - Top Level Lexing
 //==================================================================================================
 
-fn content_after_first(lex : &mut Lexer<LibrettoToken>) -> String {
+fn content_after_first<'a>(lex : &mut Lexer<'a, LibrettoToken<'a>>) -> String {
   lex.slice()[1..].to_string()
 }
 
-fn content_except_first_and_last(lex : &mut Lexer<LibrettoToken>) -> String {
+fn content_except_first_and_last<'a>(lex : &mut Lexer<'a, LibrettoToken<'a>>) -> String {
   let content = lex.slice();
   content[1..content.len()-1].to_string()
 }
 
+fn as_logic_for_top<'a>(lex : &mut Lexer<'a, LibrettoToken<'a>>) -> Lexer<'a, LibrettoLogicToken> {
+  let content = lex.slice();
+  let content = &content[1..content.len()-1];
+  let logic_lex = LibrettoLogicToken::lexer(content);
+  logic_lex
+}
+
 #[derive(Debug, Logos)]
-pub enum LibrettoToken {
+pub enum LibrettoToken<'a> {
 
   #[regex("#([^ \t\n]*)", content_after_first)]
   Tag(String),
@@ -22,8 +29,8 @@ pub enum LibrettoToken {
   #[regex(":([^ \t\n]*)", content_after_first)]
   Speaker(String),
 
-  #[regex("<([^><]*)>", content_except_first_and_last)]
-  Logic(String),
+  #[regex("<([^><]*)>", as_logic_for_top)]
+  Logic(Lexer<'a, LibrettoLogicToken>),
 
   #[regex("\"([^\"]*)\"", content_except_first_and_last)]
   Quote(String),
@@ -186,6 +193,33 @@ pub enum LibrettoLogicToken {
 
   #[regex(r"[ \t\n\f]+", logos::skip)]
   Whitespace,
+
+  #[error]
+  Error
+}
+
+//==================================================================================================
+//          Libretto Quote Token - Quote Level Lexing
+//==================================================================================================
+
+fn as_logic_for_quote<'a>(lex : &mut Lexer<'a, LibrettoQuoteToken<'a>>) -> Lexer<'a, LibrettoLogicToken> {
+  let content = lex.slice();
+  let content = &content[1..content.len()-1];
+  let logic_lex = LibrettoLogicToken::lexer(content);
+  logic_lex
+}
+
+#[derive(Debug, Logos)]
+pub enum LibrettoQuoteToken<'a> {
+
+  // #[regex("[^\\]?[")]
+  // LeftBracket,
+
+  #[token("]")]
+  RightBracket,
+
+  #[regex("<([^><]*)>", as_logic_for_quote)]
+  Logic(Lexer<'a, LibrettoLogicToken>),
 
   #[error]
   Error

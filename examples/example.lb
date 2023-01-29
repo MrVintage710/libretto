@@ -80,7 +80,7 @@ start {
 
   //You can put logic blocks in a line to define behavior
   | :Jake 
-    <if status.guild_member == false> "You can't come `(bold, wavy) here`, you aren't part of the team!" #angry 
+    <if status.guild_member == false> "%fsadf" #angry 
     <else> "Come on in <player.name>! What Can I help you with?"
     
     //Responses are denoted with '->'. They are followed by the response text, and then they are followed by another dialog. In this case,
