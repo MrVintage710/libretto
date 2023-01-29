@@ -1,4 +1,5 @@
 mod lexer;
+mod logic;
 
 use lexer::LibrettoLogicToken;
 use logos::Logos;
