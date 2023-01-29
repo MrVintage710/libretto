@@ -76,7 +76,7 @@ print(message : String) //prints to the log
 start {
   // Inside of Dialogs, you denote a new line with the '|' character. 
   // What follows is what will appear in one line of dialog.
-  | :Jake "This is a line from jake. As long as you don't press enter, this line is here."
+  | :Jake "This is a line from jake. <> As long as you don't press enter, this line is here."
 
   //You can put logic blocks in a line to define behavior
   | :Jake 

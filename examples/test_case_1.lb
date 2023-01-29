@@ -1,0 +1,73 @@
+
+let runtime = libretto!(
+    <
+
+    >
+)
+
+libretto_runtime.execute(&script, {villager_id})
+Libretto::Object
+
+let runtime = LibrettoRuntime::new()
+runtime.add_request_handler(|name| {
+
+    return Lson
+})
+
+runtime.add_data_mutated_handler(|name, old, new| {
+
+})
+
+Enum Lson {
+    int(i64),
+    float(f64),
+    bool(bool),
+    String(String),
+    Array(Vec<Self>),
+    Struct(HashMap<String, Self>)
+}
+
+Struct {
+    value : String("String")
+}
+
+lson!(
+   {
+        value : "String"
+   }
+)
+
+//This is a test case of dialog. Merchant needs help, You can decide to help him or not and your desition will influence the game.
+
+<
+
+param villager_id ? 3;
+
+request standing;
+request roster;
+
+let current_villager = roster.values[villager_id];
+let villager_name = current_villager.name;
+
+let repuation_good =  standing.this_village <= 20;
+
+if villager_name == "Todd" {
+  end;
+}
+
+>
+
+[(String, [Tag])]
+start {
+    | :<villager_name> #angry
+      <if repuation_good>
+        "[yelling]Go away Brigand![/yelling] My luck is already bad enough." #fast <end>
+      <else> "Traveler! Please help me!"
+      -> "What seems to be the problem?" {
+
+      }
+}
+
+inner_dialog {
+
+}
