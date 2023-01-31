@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{collections::HashMap, ops::{Index, self}, fmt::Display};
+use std::{collections::HashMap, ops::{self}, fmt::Display};
 
 #[derive(Debug)]
 pub enum Lson {
@@ -56,91 +56,157 @@ impl Lson {
 }
 
 impl From<i64> for Lson {
-    fn from(value: i64) -> Self {
-        Lson::Int(value)
-    }
+  fn from(value: i64) -> Self {
+    Lson::Int(value)
+  }
 }
 
 impl From<i32> for Lson {
   fn from(value: i32) -> Self {
-      Lson::Int(value as i64)
+    Lson::Int(value as i64)
   }
 }
 
 impl From<i16> for Lson {
   fn from(value: i16) -> Self {
-      Lson::Int(value as i64)
+    Lson::Int(value as i64)
   }
 }
 
 impl From<i8> for Lson {
   fn from(value: i8) -> Self {
-      Lson::Int(value as i64)
+    Lson::Int(value as i64)
   }
 }
 
 impl From<f64> for Lson {
   fn from(value: f64) -> Self {
-      Lson::Float(value)
+    Lson::Float(value)
   }
 }
 
 impl From<f32> for Lson {
   fn from(value: f32) -> Self {
-      Lson::Float(value as f64)
+    Lson::Float(value as f64)
   }
 }
 
 impl From<String> for Lson {
-    fn from(value: String) -> Self {
-        Lson::String(value)
-    }
+  fn from(value: String) -> Self {
+    Lson::String(value)
+  }
 }
 
 impl From<&str> for Lson {
   fn from(value: &str) -> Self {
-      Lson::String(value.to_string())
+    Lson::String(value.to_string())
   }
 }
 
 impl From<bool> for Lson {
-    fn from(value: bool) -> Self {
-        Lson::Bool(value)
-    }
+  fn from(value: bool) -> Self {
+    Lson::Bool(value)
+  }
 }
 
 impl <T : Into<Lson>> From<Vec<T>> for Lson {
-    fn from(value: Vec<T>) -> Self {
-        let res : Vec<Lson> = value.into_iter().map(|value| value.into()).collect();
-        Lson::Array(res)
-    }
+  fn from(value: Vec<T>) -> Self {
+    let res : Vec<Lson> = value.into_iter().map(|value| value.into()).collect();
+    Lson::Array(res)
+  }
 }
 
 impl <T: Into<Lson>, const COUNT : usize> From<[T; COUNT]> for Lson {
-    fn from(value: [T; COUNT]) -> Self {
-        let res : Vec<Lson> = value.into_iter().map(|value| value.into()).collect();
-        Lson::Array(res)
-    }
+  fn from(value: [T; COUNT]) -> Self {
+    let res : Vec<Lson> = value.into_iter().map(|value| value.into()).collect();
+    Lson::Array(res)
+  }
 }
 
 impl <T: Into<Lson>> From<HashMap<String, T>> for Lson {
-    fn from(value: HashMap<String, T>) -> Self {
-        let res : HashMap<String, Lson> = value.into_iter().map(|(key, value)| (key, value.into())).collect();
-        Lson::Struct(res)
-    }
+  fn from(value: HashMap<String, T>) -> Self {
+    let res : HashMap<String, Lson> = value.into_iter().map(|(key, value)| (key, value.into())).collect();
+    Lson::Struct(res)
+  }
 }
 
 impl <T: Into<Lson>> From<HashMap<&str, T>> for Lson {
   fn from(value: HashMap<&str, T>) -> Self {
-      let res : HashMap<String, Lson> = value.into_iter().map(|(key, value)| (key.to_string(), value.into())).collect();
-      Lson::Struct(res)
+    let res : HashMap<String, Lson> = value.into_iter().map(|(key, value)| (key.to_string(), value.into())).collect();
+    Lson::Struct(res)
   }
 }
 
 impl PartialEq<&str> for Lson {
-    fn eq(&self, other: &&str) -> bool {
-        self.as_str().map_or(false, |i| i == *other)
-    }
+  fn eq(&self, other: &&str) -> bool {
+    self.as_str().map_or(false, |s| s == *other)
+  }
+}
+
+impl PartialEq<String> for Lson {
+  fn eq(&self, other: &String) -> bool {
+    self.as_string().map_or(false, |s| s == *other)
+  }
+}
+
+impl PartialEq<i64> for Lson {
+  fn eq(&self, other: &i64) -> bool {
+      self.as_i64().map_or(false, |i| i == *other)
+  }
+}
+
+impl PartialEq<i32> for Lson {
+  fn eq(&self, other: &i32) -> bool {
+    self.as_i64().map_or(false, |i| i == (*other) as i64)
+  }
+}
+
+impl PartialEq<i16> for Lson {
+  fn eq(&self, other: &i16) -> bool {
+    self.as_i64().map_or(false, |i| i == (*other) as i64)
+  }
+}
+
+impl PartialEq<i8> for Lson {
+  fn eq(&self, other: &i8) -> bool {
+    self.as_i64().map_or(false, |i| i == (*other) as i64)
+  }
+}
+
+impl PartialEq<u64> for Lson {
+  fn eq(&self, other: &u64) -> bool {
+      self.as_i64().map_or(false, |i| i == (*other) as i64)
+  }
+}
+
+impl PartialEq<u32> for Lson {
+  fn eq(&self, other: &u32) -> bool {
+      self.as_i64().map_or(false, |i| i == (*other) as i64)
+  }
+}
+
+impl PartialEq<u16> for Lson {
+  fn eq(&self, other: &u16) -> bool {
+      self.as_i64().map_or(false, |i| i == (*other) as i64)
+  }
+}
+
+impl PartialEq<u8> for Lson {
+  fn eq(&self, other: &u8) -> bool {
+      self.as_i64().map_or(false, |i| i == (*other) as i64)
+  }
+}
+
+impl PartialEq<f64> for Lson {
+  fn eq(&self, other: &f64) -> bool {
+    self.as_f64().map_or(false, |f| f == (*other))
+  }
+}
+
+impl PartialEq<f32> for Lson {
+  fn eq(&self, other: &f32) -> bool {
+    self.as_f64().map_or(false, |f| f == (*other) as f64)
+  }
 }
 
 impl <T> ops::Index<T> for Lson where T : LsonIndex {
@@ -201,6 +267,60 @@ impl LsonIndex for usize {
     }
 }
 
+impl LsonIndex for str {
+    fn index_into<'l>(&self, value : &'l Lson) -> Option<&'l Lson> {
+      match value {
+        Lson::Struct(vec) => vec.get(self),
+        _ => None
+      }
+    }
+
+    fn index_into_mut<'l>(&self, value : &'l mut Lson) -> Option<&'l mut Lson> {
+      match value {
+        Lson::Struct(vec) => vec.get_mut(self),
+        _ => None
+      }
+    }
+
+    fn index_or_insert<'l>(&self, value : &'l mut Lson) -> &'l mut Lson {
+      if let Lson::None = value {
+        *value = Lson::Struct(HashMap::new());
+      }
+      match value {
+          Lson::Struct(map) => map.entry(self.to_owned()).or_insert(Lson::None),
+          _ => panic!("cannot access key {:?} in JSON {}", self, Type(value)),
+      }
+    }
+}
+
+impl LsonIndex for String {
+    fn index_into<'l>(&self, value : &'l Lson) -> Option<&'l Lson> {
+      self[..].index_into(value)
+    }
+
+    fn index_into_mut<'l>(&self, value : &'l mut Lson) -> Option<&'l mut Lson> {
+      self[..].index_into_mut(value)
+    }
+
+    fn index_or_insert<'l>(&self, value : &'l mut Lson) -> &'l mut Lson {
+      self[..].index_or_insert(value)
+    }
+}
+
+impl <'a, T> LsonIndex for &'a T where T: ?Sized + LsonIndex {
+    fn index_into<'l>(&self, value : &'l Lson) -> Option<&'l Lson> {
+      (**self).index_into(value)
+    }
+
+    fn index_into_mut<'l>(&self, value : &'l mut Lson) -> Option<&'l mut Lson> {
+      (**self).index_into_mut(value)
+    }
+
+    fn index_or_insert<'l>(&self, value : &'l mut Lson) -> &'l mut Lson {
+      (**self).index_or_insert(value)
+    }
+}
+
 /// Used in panic messages.
 struct Type<'a>(&'a Lson);
 
@@ -256,5 +376,15 @@ mod tests {
     fn index_array() {
       let array : Lson = ["This", "is", "a", "test"].into();
       assert_eq!(array[2], "a");
+    }
+
+    #[test]
+    fn index_struct() {
+      let array : Lson = HashMap::from([
+        ("test1", 10),
+        ("test2", 20),
+        ("test3", 30),
+      ]).into();
+      assert_eq!(array["test1"], 10);
     }
 }
