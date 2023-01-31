@@ -86,6 +86,11 @@ fn lex_float(lex : &mut Lexer<LibrettoLogicToken>) -> f64 {
   content.parse::<f64>().unwrap()
 }
 
+fn lex_bool(lex : &mut Lexer<LibrettoLogicToken>) -> bool {
+  let content = lex.slice().to_string();
+  content.as_str() == "true"
+}
+
 #[derive(Debug, Logos)]
 pub enum LibrettoLogicToken {
 
@@ -97,6 +102,9 @@ pub enum LibrettoLogicToken {
 
   #[regex("[0-9]+.[0-9]+", lex_float, priority=3)]
   FloatLiteral(f64),
+
+  #[regex("(true|false)", lex_bool)]
+  BoolLiteral(bool),
 
   #[regex("\"([^\"]*)\"", lex_string)]
   StringLiteral(String),
