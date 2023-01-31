@@ -1,7 +1,7 @@
 use core::fmt;
 use std::{collections::HashMap, ops::{self}, fmt::Display};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Lson {
   None,
   Int(i64),
