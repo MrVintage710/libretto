@@ -1,7 +1,9 @@
 use core::fmt;
 use std::{collections::HashMap, ops::{self}, fmt::Display};
 
-#[derive(Debug)]
+use crate::{parse::LibrettoParsable, lexer::LibrettoLogicToken};
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Lson {
   None,
   Int(i64),
