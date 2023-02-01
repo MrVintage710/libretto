@@ -1,7 +1,7 @@
 mod lexer;
 mod logic;
 
-use lexer::LibrettoLogicToken;
+use lexer::{LibrettoLogicToken, LibrettoQuoteToken};
 use logos::Logos;
 
 use crate::lexer::LibrettoToken;
