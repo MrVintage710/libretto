@@ -3,11 +3,11 @@ use std::collections::HashMap;
 use crate::logic::lson::Lson;
 
 pub trait LibrettoDataManager {
-    fn on_mutate(identifier : &str, old : Lson, new : Lson) -> Lson;
+    fn on_mutate(&self, identifier : &str, old : Lson, new : Lson) -> Lson;
 
-    fn on_declare(identifier : &str, value : Lson);
+    fn on_declare(&self, identifier : &str, value : Lson);
 
-    fn on_request(identifier : &str) -> Lson;
+    fn on_request(&self, identifier : &str) -> Lson;
 }
 
 pub struct DefaultDataManager {
@@ -15,15 +15,15 @@ pub struct DefaultDataManager {
 }
 
 impl LibrettoDataManager for DefaultDataManager {
-    fn on_mutate(identifier : &str, old : Lson, new : Lson) -> Lson {
+    fn on_mutate(&self, identifier : &str, old : Lson, new : Lson) -> Lson {
         todo!()
     }
 
-    fn on_declare(identifier : &str, value : Lson) {
+    fn on_declare(&self, identifier : &str, value : Lson) {
         todo!()
     }
 
-    fn on_request(identifier : &str) -> Lson {
+    fn on_request(&self, identifier : &str) -> Lson {
         todo!()
     }
 }

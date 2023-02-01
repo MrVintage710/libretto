@@ -1,6 +1,7 @@
 mod lexer;
 mod logic;
 mod runtime;
+mod parse;
 
 use lexer::LibrettoLogicToken;
 use logos::Logos;
