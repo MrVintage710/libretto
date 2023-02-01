@@ -1,8 +1,8 @@
-use crate::{logic::lson::Lson, lexer::LibrettoLogicToken};
+use crate::{logic::lson::Lson, lexer::{LibrettoLogicToken, LibrettoTokenQueue}};
 
 use super::LibrettoParsable;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct LogicLiteral {
   value : Lson
 }
@@ -14,8 +14,8 @@ impl From<Lson> for LogicLiteral {
 }
 
 impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicLiteral {
-    fn parse(lexer : &mut logos::Lexer<'a, LibrettoLogicToken>) -> Option<Self> {
-        if let Some(token) = lexer.peekable().peek() {
+    fn parse(lexer : &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> Option<Self> {
+        if let Some((token, range)) = lexer.peek() {
           match token {
               LibrettoLogicToken::BoolLiteral(value) => return Some(Lson::Bool(*value).into()),
               LibrettoLogicToken::StringLiteral(value) => return Some(Lson::String(value.clone()).into()),
@@ -33,15 +33,15 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicLiteral {
 mod tests {
     use logos::Logos;
 
-    use crate::{lexer::LibrettoLogicToken, parse::LibrettoParsable};
+    use crate::{lexer::LibrettoLogicToken, parse::LibrettoParsable, logic::lson::Lson};
 
     use super::LogicLiteral;
 
 
   #[test]
   fn parse_logic_literal() {
-    let mut lexer = LibrettoLogicToken::lexer("false");
+    let mut lexer = LibrettoLogicToken::lexer("false").spanned().peekable();
     let ast = LogicLiteral::parse(&mut lexer).unwrap();
-    println!("{:?}", ast)
+    assert_eq!(LogicLiteral{value : Lson::Bool(false)}, ast)
   }
 }

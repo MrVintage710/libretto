@@ -1,4 +1,8 @@
-use logos::{Logos, Lexer};
+use std::{iter::Peekable, fmt::Debug};
+
+use logos::{Logos, Lexer, SpannedIter};
+
+pub type LibrettoTokenQueue<'a, T> = Peekable<SpannedIter<'a, T>>;
 
 //==================================================================================================
 //          Libretto Token - Top Level Lexing
@@ -13,14 +17,14 @@ fn content_except_first_and_last<'a>(lex : &mut Lexer<'a, LibrettoToken<'a>>) ->
   content[1..content.len()-1].to_string()
 }
 
-fn as_logic_for_top<'a>(lex : &mut Lexer<'a, LibrettoToken<'a>>) -> Lexer<'a, LibrettoLogicToken> {
+fn as_logic_for_top<'a>(lex : &mut Lexer<'a, LibrettoToken<'a>>) -> LibrettoTokenQueue<'a, LibrettoLogicToken> {
   let content = lex.slice();
   let content = &content[1..content.len()-1];
   let logic_lex = LibrettoLogicToken::lexer(content);
-  logic_lex
+  logic_lex.spanned().peekable()
 }
 
-#[derive(Debug, Logos)]
+#[derive(Logos)]
 pub enum LibrettoToken<'a> {
 
   #[regex("#([^ \t\n]*)", content_after_first)]
@@ -30,7 +34,7 @@ pub enum LibrettoToken<'a> {
   Speaker(String),
 
   #[regex("<([^><]*)>", as_logic_for_top)]
-  Logic(Lexer<'a, LibrettoLogicToken>),
+  Logic(LibrettoTokenQueue<'a, LibrettoLogicToken>),
 
   #[regex("\"([^\"]*)\"", content_except_first_and_last)]
   Quote(String),

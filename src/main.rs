@@ -3,8 +3,10 @@ mod logic;
 mod runtime;
 mod parse;
 
+use std::iter::Peekable;
+
 use lexer::LibrettoLogicToken;
-use logos::Logos;
+use logos::{Logos, SpannedIter};
 
 use crate::lexer::LibrettoToken;
 
