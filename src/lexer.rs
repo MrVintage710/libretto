@@ -72,10 +72,6 @@ fn lex_string(lex : &mut Lexer<LibrettoLogicToken>) -> String {
   content[1..content.len()-1].to_string()
 }
 
-fn lex_text(lex : &mut Lexer<LibrettoLogicToken>) -> String {
-  lex.slice().to_string()
-}
-
 fn lex_int(lex : &mut Lexer<LibrettoLogicToken>) -> i64 {
   let content = lex.slice().to_string();
   content.parse::<i64>().unwrap()
@@ -94,8 +90,8 @@ fn lex_bool(lex : &mut Lexer<LibrettoLogicToken>) -> bool {
 #[derive(Debug, Logos, PartialEq)]
 pub enum LibrettoLogicToken {
 
-  #[regex("[a-zA-Z0-9_]+", lex_text, priority=1)]
-  Text(String),
+  #[regex("[a-zA-Z0-9_]+", priority=1)]
+  Text,
 
   #[regex("[0-9]+", lex_int, priority=2)]
   IntLiteral(i64),
