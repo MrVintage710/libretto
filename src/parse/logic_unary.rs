@@ -1,4 +1,4 @@
-use crate::lexer::LibrettoLogicToken;
+use crate::lexer::{LibrettoLogicToken, LibrettoTokenQueue};
 
 use super::{logic_value::LogicValue, LibrettoParsable};
 
@@ -9,7 +9,7 @@ pub struct LogicUnaryStatement {
 }
 
 impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryStatement {
-    fn parse(lexer : &mut logos::Lexer<'a, LibrettoLogicToken>) -> Option<Self> {
-        
+    fn parse(lexer : &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> Option<Self> {
+        todo!()
     }
 }

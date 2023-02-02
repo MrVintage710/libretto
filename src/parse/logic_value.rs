@@ -44,7 +44,7 @@ mod tests {
 
   #[test]
   fn parse_logic_literal() {
-    let mut lexer = LibrettoLogicToken::lexer("x");
+    let mut lexer = LibrettoLogicToken::lexer("x").spanned().peekable();
     let ast = LogicValue::parse(&mut lexer).unwrap();
     println!("{:?}", ast)
   }
