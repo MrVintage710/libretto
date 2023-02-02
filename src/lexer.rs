@@ -95,7 +95,7 @@ fn lex_bool(lex : &mut Lexer<LibrettoLogicToken>) -> bool {
 pub enum LibrettoLogicToken {
 
   #[regex("[a-zA-Z0-9_]+", lex_text, priority=1)]
-  Text(String),
+  Identifier(String),
 
   #[regex("[0-9]+", lex_int, priority=2)]
   IntLiteral(i64),

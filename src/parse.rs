@@ -1,4 +1,6 @@
-mod logic_literal;
+mod logic_value;
+mod logic_let;
+mod logic_unary;
 
 use std::process::Output;
 use logos::{Logos, Lexer};

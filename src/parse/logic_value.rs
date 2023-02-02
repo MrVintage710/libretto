@@ -3,17 +3,18 @@ use crate::{logic::lson::Lson, lexer::LibrettoLogicToken};
 use super::LibrettoParsable;
 
 #[derive(Debug)]
-pub struct LogicLiteral {
-  value : Lson
+pub enum LogicValue {
+  Literal(Lson),
+  Variable(String)
 }
 
-impl From<Lson> for LogicLiteral {
+impl From<Lson> for LogicValue {
     fn from(value: Lson) -> Self {
-        LogicLiteral { value }
+        LogicValue::Literal(value)
     }
 }
 
-impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicLiteral {
+impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
     fn parse(lexer : &mut logos::Lexer<'a, LibrettoLogicToken>) -> Option<Self> {
         if let Some(token) = lexer.peekable().peek() {
           match token {
@@ -21,6 +22,7 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicLiteral {
               LibrettoLogicToken::StringLiteral(value) => return Some(Lson::String(value.clone()).into()),
               LibrettoLogicToken::IntLiteral(value) => return Some(Lson::Int(*value).into()),
               LibrettoLogicToken::FloatLiteral(value) => return Some(Lson::Float(*value).into()),
+              LibrettoLogicToken::Identifier(value) => return Some(LogicValue::Variable(value.clone())),
               _ => {}
           };
         }
@@ -35,13 +37,13 @@ mod tests {
 
     use crate::{lexer::LibrettoLogicToken, parse::LibrettoParsable};
 
-    use super::LogicLiteral;
+    use super::LogicValue;
 
 
   #[test]
   fn parse_logic_literal() {
-    let mut lexer = LibrettoLogicToken::lexer("false");
-    let ast = LogicLiteral::parse(&mut lexer).unwrap();
+    let mut lexer = LibrettoLogicToken::lexer("x");
+    let ast = LogicValue::parse(&mut lexer).unwrap();
     println!("{:?}", ast)
   }
 }
