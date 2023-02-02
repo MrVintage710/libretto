@@ -1,4 +1,6 @@
-use crate::{logic::lson::Lson, lexer::LibrettoLogicToken};
+use std::collections::btree_map::Range;
+
+use crate::{logic::lson::Lson, lexer::{LibrettoLogicToken, LibrettoTokenQueue}};
 
 use super::LibrettoParsable;
 
@@ -15,8 +17,8 @@ impl From<Lson> for LogicValue {
 }
 
 impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
-    fn parse(lexer : &mut logos::Lexer<'a, LibrettoLogicToken>) -> Option<Self> {
-        if let Some(token) = lexer.peekable().peek() {
+    fn parse(lexer : &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> Option<Self> {
+        if let Some((token, range)) = lexer.peekable().peek() {
           match token {
               LibrettoLogicToken::BoolLiteral(value) => return Some(Lson::Bool(*value).into()),
               LibrettoLogicToken::StringLiteral(value) => return Some(Lson::String(value.clone()).into()),

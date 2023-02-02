@@ -3,7 +3,7 @@ use std::{collections::HashMap, ops::{self}, fmt::Display};
 
 use crate::{parse::LibrettoParsable, lexer::LibrettoLogicToken};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Lson {
   None,
   Int(i64),

@@ -5,10 +5,10 @@ mod logic_unary;
 use std::process::Output;
 use logos::{Logos, Lexer};
 
-use crate::runtime::LibrettoRuntime;
+use crate::{runtime::LibrettoRuntime, lexer::LibrettoTokenQueue};
 
 pub trait LibrettoParsable<'a, T : Logos<'a>> where Self : Sized {
-  fn parse(lexer : &mut Lexer<'a, T>) -> Option<Self>;
+  fn parse(lexer : &mut LibrettoTokenQueue<'a, T>) -> Option<Self>;
 }
 
 pub trait LibrettoEvaluator {
