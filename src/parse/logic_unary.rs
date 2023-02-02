@@ -10,6 +10,13 @@ pub struct LogicUnaryStatement {
 
 impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryStatement {
     fn parse(lexer : &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> Option<Self> {
-        todo!()
+      if let logic_value = LogicValue::parse(lexer) {
+
+      } else {
+        let token = lexer.peek();
+      }
+
+
+      None
     }
 }
