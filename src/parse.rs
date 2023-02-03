@@ -7,8 +7,8 @@ use logos::{Logos, Lexer};
 
 use crate::{runtime::LibrettoRuntime, lexer::LibrettoTokenQueue};
 
-pub trait LibrettoParsable<'a, T : Logos<'a>> where Self : Sized {
-  fn parse(lexer : &mut LibrettoTokenQueue<'a, T>) -> Option<Self>;
+pub trait LibrettoParsable<'a, T : Logos<'a> + PartialEq> where Self : Sized {
+  fn parse(queue : &mut LibrettoTokenQueue<'a, T>) -> Option<Self>;
 }
 
 pub trait LibrettoEvaluator {

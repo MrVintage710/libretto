@@ -1,6 +1,10 @@
-use std::{iter::Peekable, fmt::Debug};
+use std::{iter::Peekable, fmt::Debug, ops::Range};
 
 use logos::{Logos, Lexer, SpannedIter};
+
+trait Ordinal34 {
+
+}
 
 //==================================================================================================
 //          Libretto Token - Top Level Lexing
@@ -29,16 +33,23 @@ impl <'a, T> Debug for LibrettoTokenQueue<'a, T> where T : Logos<'a> + PartialEq
 }
 
 impl <'a, T> LibrettoTokenQueue<'a, T> where T : Logos<'a> + PartialEq {
-
-  fn next_is(&self, token : T) -> bool {
+  pub fn next_is(&self, token : T) -> bool {
     let next = self.iterator.peek();
     if next.is_none() { return false }
     let (t, range) = next.unwrap();
     token == *t
   }
 
-  fn pop(&mut self) -> T {
+  pub fn pop(&mut self) -> Option<(T, Range<usize>)> {
     self.iterator.next()
+  }
+
+  pub fn pop_if(&mut self, token : T) -> Option<(T, Range<usize>)> {
+    if self.next_is(token) {
+      self.pop()
+    } else {
+      None
+    }
   }
 }
 
