@@ -2,7 +2,45 @@ use std::{iter::Peekable, fmt::Debug};
 
 use logos::{Logos, Lexer, SpannedIter};
 
-pub type LibrettoTokenQueue<'a, T> = Peekable<SpannedIter<'a, T>>;
+//==================================================================================================
+//          Libretto Token - Top Level Lexing
+//==================================================================================================
+
+pub struct LibrettoTokenQueue<'a, T> where T : Logos<'a> + PartialEq{
+  iterator : Peekable<SpannedIter<'a, T>>
+}
+
+impl <'a, T> From<Peekable<SpannedIter<'a, T>>> for LibrettoTokenQueue<'a, T> where T : Logos<'a> + PartialEq {
+  fn from(value: Peekable<SpannedIter<'a, T>>) -> Self {
+    LibrettoTokenQueue { iterator: value }
+  }
+}
+
+impl <'a, T> PartialEq for LibrettoTokenQueue<'a, T> where T : Logos<'a> + PartialEq {
+    fn eq(&self, other: &Self) -> bool {
+        self.iterator.eq(other.iterator)
+    }
+}
+
+impl <'a, T> Debug for LibrettoTokenQueue<'a, T> where T : Logos<'a> + PartialEq{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("[Libretto Token Queue]")
+    }
+}
+
+impl <'a, T> LibrettoTokenQueue<'a, T> where T : Logos<'a> + PartialEq {
+
+  fn next_is(&self, token : T) -> bool {
+    let next = self.iterator.peek();
+    if next.is_none() { return false }
+    let (t, range) = next.unwrap();
+    token == *t
+  }
+
+  fn pop(&mut self) -> T {
+    self.iterator.next()
+  }
+}
 
 //==================================================================================================
 //          Libretto Token - Top Level Lexing
@@ -21,10 +59,10 @@ fn as_logic_for_top<'a>(lex : &mut Lexer<'a, LibrettoToken<'a>>) -> LibrettoToke
   let content = lex.slice();
   let content = &content[1..content.len()-1];
   let logic_lex = LibrettoLogicToken::lexer(content);
-  logic_lex.spanned().peekable()
+  logic_lex.spanned().peekable().into()
 }
 
-#[derive(Logos)]
+#[derive(Logos, PartialEq)]
 pub enum LibrettoToken<'a> {
 
   #[regex("#([^ \t\n]*)", content_after_first)]
@@ -95,7 +133,7 @@ fn lex_bool(lex : &mut Lexer<LibrettoLogicToken>) -> bool {
   content.as_str() == "true"
 }
 
-#[derive(Debug, Logos)]
+#[derive(Debug, Logos, PartialEq)]
 pub enum LibrettoLogicToken {
 
   #[regex("[a-zA-Z0-9_]+", lex_text, priority=1)]
@@ -214,14 +252,14 @@ pub enum LibrettoLogicToken {
 //          Libretto Quote Token - Quote Level Lexing
 //==================================================================================================
 
-fn as_logic_for_quote<'a>(lex : &mut Lexer<'a, LibrettoQuoteToken<'a>>) -> Lexer<'a, LibrettoLogicToken> {
+fn as_logic_for_quote<'a>(lex : &mut Lexer<'a, LibrettoQuoteToken<'a>>) -> LibrettoTokenQueue<'a, LibrettoLogicToken> {
   let content = lex.slice();
   let content = &content[1..content.len()-1];
   let logic_lex = LibrettoLogicToken::lexer(content);
-  logic_lex
+  logic_lex.spanned().peekable().into()
 }
 
-#[derive(Debug, Logos)]
+#[derive(Debug, Logos, PartialEq)]
 pub enum LibrettoQuoteToken<'a> {
 
   // #[regex("[^\\]?[")]
@@ -231,7 +269,7 @@ pub enum LibrettoQuoteToken<'a> {
   RightBracket,
 
   #[regex("<([^><]*)>", as_logic_for_quote)]
-  Logic(Lexer<'a, LibrettoLogicToken>),
+  Logic(LibrettoTokenQueue<'a, LibrettoLogicToken>),
 
   #[error]
   Error

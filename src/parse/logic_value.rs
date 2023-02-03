@@ -19,22 +19,17 @@ impl From<Lson> for LogicValue {
 impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
     fn parse(lexer : &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> Option<Self> {
       let lex = lexer.peek();
-      
-      if let Some((token, range)) = lexer.peek() {
-          match token {
-              LibrettoLogicToken::BoolLiteral(value) => {
-            
-                return Some(Lson::Bool(*value).into())
-              },
-              LibrettoLogicToken::StringLiteral(value) => return Some(Lson::String(value.clone()).into()),
-              LibrettoLogicToken::IntLiteral(value) => return Some(Lson::Int(*value).into()),
-              LibrettoLogicToken::FloatLiteral(value) => return Some(Lson::Float(*value).into()),
-              LibrettoLogicToken::Identifier(value) => return Some(LogicValue::Variable(value.clone())),
-              _ => {}
-          };
-        }
+      if lex.is_none() { return None }
+      let (token, _) = lexer.next().unwrap();
 
-        None
+      match token {
+        LibrettoLogicToken::BoolLiteral(value) => return Some(Lson::Bool(value).into()),
+        LibrettoLogicToken::StringLiteral(value) => return Some(Lson::String(value.clone()).into()),
+        LibrettoLogicToken::IntLiteral(value) => return Some(Lson::Int(value).into()),
+        LibrettoLogicToken::FloatLiteral(value) => return Some(Lson::Float(value).into()),
+        LibrettoLogicToken::Identifier(value) => return Some(LogicValue::Variable(value.clone())),
+        _ => None
+      }
     }
 }
 
