@@ -3,10 +3,6 @@ use peekmore::{PeekMoreIterator, PeekMore};
 use logos::{Logos, Lexer, SpannedIter};
 use strum::EnumDiscriminants;
 
-trait Discriminate<T> {
-    
-}
-
 //==================================================================================================
 //          Libretto Token - Top Level Lexing
 //==================================================================================================
