@@ -1,9 +1,10 @@
 use std::{iter::Peekable, fmt::Debug, ops::Range};
-
+use peekmore::{PeekMoreIterator, PeekMore};
 use logos::{Logos, Lexer, SpannedIter};
+use strum::EnumDiscriminants;
 
-trait Ordinal34 {
-
+trait Discriminate<T> {
+    
 }
 
 //==================================================================================================
@@ -11,12 +12,12 @@ trait Ordinal34 {
 //==================================================================================================
 
 pub struct LibrettoTokenQueue<'a, T> where T : Logos<'a> + PartialEq{
-  iterator : Peekable<SpannedIter<'a, T>>
+  iterator : PeekMoreIterator<SpannedIter<'a, T>>
 }
 
-impl <'a, T> From<Peekable<SpannedIter<'a, T>>> for LibrettoTokenQueue<'a, T> where T : Logos<'a> + PartialEq {
-  fn from(value: Peekable<SpannedIter<'a, T>>) -> Self {
-    LibrettoTokenQueue { iterator: value }
+impl <'a, T> From<Lexer<'a, T>> for LibrettoTokenQueue<'a, T> where T : Logos<'a> + PartialEq {
+  fn from(value: Lexer<'a, T>) -> Self {
+    LibrettoTokenQueue { iterator: value.spanned().peekmore() }
   }
 }
 
@@ -33,8 +34,15 @@ impl <'a, T> Debug for LibrettoTokenQueue<'a, T> where T : Logos<'a> + PartialEq
 }
 
 impl <'a, T> LibrettoTokenQueue<'a, T> where T : Logos<'a> + PartialEq {
-  pub fn next_is(&self, token : T) -> bool {
+  pub fn next_is<D>(&self, token : D) -> bool where {
     let next = self.iterator.peek();
+    if next.is_none() { return false }
+    let (t, range) = next.unwrap();
+    token == *t
+  }
+
+  pub fn next_nth_is(&self, token : T, n : usize) -> bool {
+    let next = self.iterator.peek_nth(n);
     if next.is_none() { return false }
     let (t, range) = next.unwrap();
     token == *t
@@ -70,10 +78,10 @@ fn as_logic_for_top<'a>(lex : &mut Lexer<'a, LibrettoToken<'a>>) -> LibrettoToke
   let content = lex.slice();
   let content = &content[1..content.len()-1];
   let logic_lex = LibrettoLogicToken::lexer(content);
-  logic_lex.spanned().peekable().into()
+  logic_lex.into()
 }
 
-#[derive(Logos, PartialEq)]
+#[derive(Logos, PartialEq, EnumDiscriminants)]
 pub enum LibrettoToken<'a> {
 
   #[regex("#([^ \t\n]*)", content_after_first)]
@@ -143,6 +151,8 @@ fn lex_bool(lex : &mut Lexer<LibrettoLogicToken>) -> bool {
   let content = lex.slice().to_string();
   content.as_str() == "true"
 }
+
+
 
 #[derive(Debug, Logos, PartialEq)]
 pub enum LibrettoLogicToken {
@@ -267,7 +277,7 @@ fn as_logic_for_quote<'a>(lex : &mut Lexer<'a, LibrettoQuoteToken<'a>>) -> Libre
   let content = lex.slice();
   let content = &content[1..content.len()-1];
   let logic_lex = LibrettoLogicToken::lexer(content);
-  logic_lex.spanned().peekable().into()
+  logic_lex.into()
 }
 
 #[derive(Debug, Logos, PartialEq)]

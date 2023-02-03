@@ -18,9 +18,9 @@ impl From<Lson> for LogicValue {
 
 impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
     fn parse(queue : &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> Option<Self> {
-      if queue.next_is(token)
+      if queue.next_is(token) 
       
-      let lex = lexer.peek();
+      let lex = lexer.peek(); &Token
       if lex.is_none() { return None }
       let (token, _) = lexer.next().unwrap();
 

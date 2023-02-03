@@ -7,6 +7,11 @@ use logos::{Logos, Lexer};
 
 use crate::{runtime::LibrettoRuntime, lexer::LibrettoTokenQueue};
 
+pub enum ParseResult {
+  Parsed,
+  
+}
+
 pub trait LibrettoParsable<'a, T : Logos<'a> + PartialEq> where Self : Sized {
   fn parse(queue : &mut LibrettoTokenQueue<'a, T>) -> Option<Self>;
 }
