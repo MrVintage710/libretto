@@ -1,4 +1,3 @@
-
 pub struct LogicSetStatement {
-  identifier : String,
+    identifier: String,
 }

@@ -1,13 +1,37 @@
-use std::collections::btree_map::Range;
+use super::{LibrettoParsable, ParseResult};
+use crate::{
+    lexer::{self, LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal},
+    logic::lson::Lson,
+};
 
-use crate::{logic::lson::Lson, lexer::{LibrettoLogicToken, LibrettoTokenQueue}};
-
-use super::LibrettoParsable;
-
+/// This Enum is part of the Libretto AST. It represents a value inside of the source code of Libretto. This is any of the following:
+/// 
+/// Int
+/// ``` 1 ```
+/// 
+/// Float
+/// ``` 3.1459 ```
+/// 
+/// String
+/// ``` "Hello World" ```
+/// 
+/// Bool
+/// ``` true ```
+/// 
+/// Arrays (WIP)
+/// ``` [1, 2, 3, 4] ```
+/// 
+/// Struct (WIP)
+/// ``` {foo : "bar"} ```
+/// 
+/// Functions (WIP)
+/// ``` () : string { return "Hello World!" } ```
+/// 
+/// Evaluates to Lson obj containing these values
 #[derive(Debug)]
 pub enum LogicValue {
-  Literal(Lson),
-  Variable(String)
+    Literal(Lson),
+    Variable(String),
 }
 
 impl From<Lson> for LogicValue {
@@ -16,22 +40,49 @@ impl From<Lson> for LogicValue {
     }
 }
 
-impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
-    fn parse(queue : &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> Option<Self> {
-      if queue.next_is(token) 
-      
-      let lex = lexer.peek(); &Token
-      if lex.is_none() { return None }
-      let (token, _) = lexer.next().unwrap();
 
-      match token {
-        LibrettoLogicToken::BoolLiteral(value) => return Some(Lson::Bool(value).into()),
-        LibrettoLogicToken::StringLiteral(value) => return Some(Lson::String(value.clone()).into()),
-        LibrettoLogicToken::IntLiteral(value) => return Some(Lson::Int(value).into()),
-        LibrettoLogicToken::FloatLiteral(value) => return Some(Lson::Float(value).into()),
-        LibrettoLogicToken::Identifier(value) => return Some(LogicValue::Variable(value.clone())),
-        _ => None
-      }
+impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
+    
+    ///Parse a LogicValue Object from a Token Queue
+    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> ParseResult<Self> {
+
+        //First we check if the next token is one of the following:
+        //String Literal, Bool Literal, Float Literal, Int Literal, Identifier
+        //If is isn't any of those, return a failure.
+        if !(queue.next_is(LogicOrdinal::StringLiteral)
+            || queue.next_is(LogicOrdinal::BoolLiteral)
+            || queue.next_is(LogicOrdinal::FloatLiteral)
+            || queue.next_is(LogicOrdinal::IntLiteral)
+            || queue.next_is(LogicOrdinal::Identifier))
+        {
+            return ParseResult::Failure;
+        }
+
+        //Now we pop the token, and return a Parsed(LogicValue) with the token type inside
+        //Later on this method will also hold values for objects and arrays, however 
+        //parsing for those structures has not been implemented yet.
+        if let Some(token) = queue.pop() {
+            match token {
+                LibrettoLogicToken::StringLiteral(value) => {
+                    ParseResult::Parsed(Lson::String(value).into())
+                }
+                LibrettoLogicToken::BoolLiteral(value) => {
+                    ParseResult::Parsed(Lson::Bool(value).into())
+                }
+                LibrettoLogicToken::FloatLiteral(value) => {
+                    ParseResult::Parsed(Lson::Float(value).into())
+                }
+                LibrettoLogicToken::IntLiteral(value) => {
+                    ParseResult::Parsed(Lson::Int(value).into())
+                }
+                LibrettoLogicToken::Identifier(value) => {
+                    ParseResult::Parsed(LogicValue::Variable(value))
+                }
+                _ => ParseResult::Failure,
+            }
+        } else {
+            ParseResult::Failure
+        }
     }
 }
 
@@ -39,15 +90,18 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
 mod tests {
     use logos::Logos;
 
-    use crate::{lexer::LibrettoLogicToken, parse::LibrettoParsable};
+    use crate::{
+        lexer::{LibrettoLogicToken, LibrettoTokenQueue},
+        parse::LibrettoParsable,
+    };
 
     use super::LogicValue;
 
-
-  #[test]
-  fn parse_logic_literal() {
-    let mut lexer = LibrettoLogicToken::lexer("x").spanned().peekable();
-    let ast = LogicValue::parse(&mut lexer).unwrap();
-    println!("{:?}", ast)
-  }
+    #[test]
+    fn parse_logic_literal() {
+        let mut lex = LibrettoLogicToken::lexer("true");
+        let mut queue = LibrettoTokenQueue::from(lex);
+        let ast = LogicValue::parse(&mut queue).unwrap();
+        println!("{:?}", ast)
+    }
 }

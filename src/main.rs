@@ -1,9 +1,7 @@
 mod lexer;
 mod logic;
-mod runtime;
 mod parse;
-
-use std::iter::Peekable;
+mod runtime;
 
 use lexer::LibrettoLogicToken;
 use logos::{Logos, SpannedIter};
@@ -25,7 +23,7 @@ fn main() {
     //         LibrettoToken::Quote(value) => println!("Quote: {}", value),
     //         _ => println!("{:?}", token)
     //     }
-        
+
     // }
 
     let mut logic_lex = LibrettoLogicToken::lexer("false");
