@@ -61,6 +61,8 @@ while false {
 
 //Default functions
 
+type(obj : any) : string //returns the string representation of the type
+
 wait(time : float) //Stops the thread for 'time' seconds
 
 wait_milli(time : int) //Stops the thread for 'time' milliseconds

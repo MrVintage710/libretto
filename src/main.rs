@@ -1,8 +1,10 @@
 mod lexer;
 mod logic;
+mod parse;
+mod runtime;
 
 use lexer::{LibrettoLogicToken, LibrettoQuoteToken};
-use logos::Logos;
+use logos::{Logos, SpannedIter};
 
 use crate::lexer::LibrettoToken;
 
@@ -21,7 +23,7 @@ fn main() {
     //         LibrettoToken::Quote(value) => println!("Quote: {}", value),
     //         _ => println!("{:?}", token)
     //     }
-        
+
     // }
 
     let mut logic_lex = LibrettoLogicToken::lexer("false");

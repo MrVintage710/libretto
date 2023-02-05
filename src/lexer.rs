@@ -1,249 +1,391 @@
-use logos::{Logos, Lexer};
+use logos::{Lexer, Logos};
+use peekmore::{PeekMore, PeekMoreIterator};
+use std::{fmt::Debug, marker::PhantomData};
+use strum::EnumDiscriminants;
+
+//==================================================================================================
+//          Libretto Token Queue
+//==================================================================================================
+
+#[derive(Clone)]
+pub struct LibrettoTokenQueue<'a, T>
+where
+    T: Logos<'a> + PartialEq + Clone + Ordinal,
+    T::Extras: Clone,
+{
+    iterator: PeekMoreIterator<Lexer<'a, T>>,
+}
+
+impl<'a, T> From<Lexer<'a, T>> for LibrettoTokenQueue<'a, T>
+where
+    T: Logos<'a> + PartialEq + Clone + Ordinal,
+    T::Extras: Clone,
+{
+    fn from(value: Lexer<'a, T>) -> Self {
+        LibrettoTokenQueue {
+            iterator: value.into_iter().peekmore(),
+        }
+    }
+}
+
+impl<'a, T> PartialEq for LibrettoTokenQueue<'a, T>
+where
+    T: Logos<'a> + PartialEq + Clone + Ordinal,
+    T::Extras: Clone,
+{
+    fn eq(&self, other: &Self) -> bool {
+        //Filthy hack
+        true
+    }
+}
+
+impl<'a, T> Debug for LibrettoTokenQueue<'a, T>
+where
+    T: Logos<'a> + PartialEq + Clone + Ordinal,
+    T::Extras: Clone,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("[Libretto Token Queue]")
+    }
+}
+
+impl<'a, T> LibrettoTokenQueue<'a, T>
+where
+    T: Logos<'a> + PartialEq + Clone + Ordinal + 'a,
+    T::Extras: Clone,
+{
+    pub fn next_is<D: From<T> + PartialEq + Copy>(&mut self, ordinal_group: impl Into<OrdinalGroup<'a, T, D>>) -> bool {
+        let next = self.iterator.peek();
+        if next.is_none() {
+            return false;
+        }
+        let t = next.unwrap();
+        let ordinal_group : OrdinalGroup<'a, T, D> = ordinal_group.into();
+        ordinal_group.check_ordinal(t)
+    }
+
+    pub fn next_nth_is<D: From<T> + PartialEq + Copy>(&mut self, ordinal_group: impl Into<OrdinalGroup<'a, T, D>>, n: usize) -> bool {
+        let next = self.iterator.peek_nth(n);
+        if next.is_none() {
+            return false;
+        }
+        let t = next.unwrap();
+        let ordinal_group : OrdinalGroup<'a, T, D> = ordinal_group.into();
+        ordinal_group.check_ordinal(t)
+    }
+
+    pub fn pop(&mut self) -> Option<T> {
+        self.iterator.next()
+    }
+
+    pub fn pop_if_next_is<D: From<T> + PartialEq + Copy>(&mut self, ordinal_group: impl Into<OrdinalGroup<'a, T, D>>) -> Option<T> {
+        if self.next_is(ordinal_group) {
+            self.pop()
+        } else {
+            None
+        }
+    }
+
+    pub fn pop_until<D: From<T> + PartialEq + Copy>(&mut self, ordinal_group: impl Into<OrdinalGroup<'a, T, D>>) -> Vec<T> {
+        let mut tokens = Vec::new();
+        let ordinal_group : OrdinalGroup<'a, T, D> = ordinal_group.into();
+        while(!self.next_is(ordinal_group.clone())) {
+            if let Some(token) = self.pop() {
+                tokens.push(token)
+            }
+        }
+        tokens
+    }
+}
+
+//==================================================================================================
+//          Ordinal - For Checking Enums
+//==================================================================================================
+
+pub trait Ordinal: Sized + Clone {
+    fn check_ordinal<T>(&self, ordinal: T) -> bool
+    where
+        T: PartialEq + From<Self>,
+    {
+        let other = T::from(self.clone());
+        ordinal == other
+    }
+}
+
+//==================================================================================================
+//          Ordinal Groups
+//==================================================================================================
+
+#[derive(Clone)]
+pub struct OrdinalGroup<'a, T, D> where T: Logos<'a> + PartialEq + Clone + Ordinal, T::Extras: Clone,  D: From<T> + PartialEq + Copy {
+    tokens : Vec<D>,
+    _phantom : &'a PhantomData<T>
+}
+
+impl <'a, D, T, const COUNT : usize> From<[D; COUNT]> for OrdinalGroup<'a, T, D> where T: Logos<'a> + PartialEq + Clone + Ordinal, T::Extras: Clone, D: From<T> + PartialEq + Copy {
+    fn from(value: [D; COUNT]) -> Self {
+        OrdinalGroup { tokens: Vec::from(value), _phantom: &PhantomData }
+    }
+}
+
+impl <'a, D, T> From<D> for OrdinalGroup<'a, T, D> where T: Logos<'a> + PartialEq + Clone + Ordinal, T::Extras: Clone, D: From<T> + PartialEq + Copy {
+    fn from(value: D) -> Self {
+        let mut tokens = Vec::new();
+        tokens.push(value);
+        OrdinalGroup { tokens, _phantom: &PhantomData }
+    }
+}
+
+impl <'a, D, T> OrdinalGroup<'a, T, D> where T: Logos<'a> + PartialEq + Clone + Ordinal, T::Extras: Clone, D: From<T> + PartialEq + Copy {
+    fn check_ordinal(&self, token : &T) -> bool {
+        for inner in self.tokens.iter() {
+            if token.check_ordinal(*inner) {return true}
+        }
+
+        false
+    }
+}
 
 //==================================================================================================
 //          Libretto Token - Top Level Lexing
 //==================================================================================================
 
-fn content_after_first<'a>(lex : &mut Lexer<'a, LibrettoToken<'a>>) -> String {
-  lex.slice()[1..].to_string()
+fn content_after_first<'a>(lex: &mut Lexer<'a, LibrettoToken<'a>>) -> String {
+    lex.slice()[1..].to_string()
 }
 
-fn content_except_first_and_last<'a>(lex : &mut Lexer<'a, LibrettoToken<'a>>) -> String {
-  let content = lex.slice();
-  content[1..content.len()-1].to_string()
+fn content_except_first_and_last<'a>(lex: &mut Lexer<'a, LibrettoToken<'a>>) -> String {
+    let content = lex.slice();
+    content[1..content.len() - 1].to_string()
 }
 
-fn as_logic_for_top<'a>(lex : &mut Lexer<'a, LibrettoToken<'a>>) -> Lexer<'a, LibrettoLogicToken> {
-  let content = lex.slice();
-  let content = &content[1..content.len()-1];
-  let logic_lex = LibrettoLogicToken::lexer(content);
-  logic_lex
+fn as_logic_for_top<'a>(
+    lex: &mut Lexer<'a, LibrettoToken<'a>>,
+) -> LibrettoTokenQueue<'a, LibrettoLogicToken> {
+    let content = lex.slice();
+    let content = &content[1..content.len() - 1];
+    let logic_lex = LibrettoLogicToken::lexer(content);
+    logic_lex.into()
 }
 
-#[derive(Debug, Logos)]
+impl<'a> Ordinal for LibrettoToken<'a> {}
+
+#[derive(Logos, PartialEq, EnumDiscriminants, Clone)]
+#[strum_discriminants(name(TokenOrdinal))]
 pub enum LibrettoToken<'a> {
+    #[regex("#([^ \t\n]*)", content_after_first)]
+    Tag(String),
 
-  #[regex("#([^ \t\n]*)", content_after_first)]
-  Tag(String),
-  
-  #[regex(":([^ \t\n]*)", content_after_first)]
-  Speaker(String),
+    #[regex(":([^ \t\n]*)", content_after_first)]
+    Speaker(String),
 
-  #[regex("<([^><]*)>", as_logic_for_top)]
-  Logic(Lexer<'a, LibrettoLogicToken>),
+    #[regex("<([^><]*)>", as_logic_for_top)]
+    Logic(LibrettoTokenQueue<'a, LibrettoLogicToken>),
 
-  #[regex("\"([^\"]*)\"", content_except_first_and_last)]
-  Quote(String),
+    #[regex("\"([^\"]*)\"", content_except_first_and_last)]
+    Quote(String),
 
-  #[token("|")]
-  Bar,
+    #[token("|")]
+    Bar,
 
-  #[token("{")]
-  LeftCurlyBracket,
+    #[token("{")]
+    LeftCurlyBracket,
 
-  #[token("}")]
-  RightCurlyBracket,
+    #[token("}")]
+    RightCurlyBracket,
 
-  #[token("->")]
-  Arrow,
+    #[token("->")]
+    Arrow,
 
-  #[token("--")]
-  Dash,
+    #[token("--")]
+    Dash,
 
-  #[token("request")]
-  Request,
+    #[token("request")]
+    Request,
 
-  #[regex(r"//[^\n\r]+(?:\*\)|[\n\r])", logos::skip)]
-  Comment,
+    #[regex(r"//[^\n\r]+(?:\*\)|[\n\r])", logos::skip)]
+    Comment,
 
-  #[regex(r"[ \t\n\f]+", logos::skip)]
-  Whitespace,
+    #[regex(r"[ \t\n\f]+", logos::skip)]
+    Whitespace,
 
-  #[error]
-  Error
+    #[error]
+    Error,
 }
 
 //==================================================================================================
 //          Libretto Logic Token - Logic Level Lexing
 //==================================================================================================
 
-fn lex_string(lex : &mut Lexer<LibrettoLogicToken>) -> String {
-  let content = lex.slice();
-  content[1..content.len()-1].to_string()
+fn lex_string(lex: &mut Lexer<LibrettoLogicToken>) -> String {
+    let content = lex.slice();
+    content[1..content.len() - 1].to_string()
 }
 
-fn lex_int(lex : &mut Lexer<LibrettoLogicToken>) -> i64 {
-  let content = lex.slice().to_string();
-  content.parse::<i64>().unwrap()
+fn lex_text(lex: &mut Lexer<LibrettoLogicToken>) -> String {
+    lex.slice().to_string()
 }
 
-fn lex_float(lex : &mut Lexer<LibrettoLogicToken>) -> f64 {
-  let content = lex.slice().to_string();
-  content.parse::<f64>().unwrap()
+fn lex_int(lex: &mut Lexer<LibrettoLogicToken>) -> i64 {
+    let content = lex.slice().to_string();
+    content.parse::<i64>().unwrap()
 }
 
-fn lex_bool(lex : &mut Lexer<LibrettoLogicToken>) -> bool {
-  let content = lex.slice().to_string();
-  content.as_str() == "true"
+fn lex_float(lex: &mut Lexer<LibrettoLogicToken>) -> f64 {
+    let content = lex.slice().to_string();
+    content.parse::<f64>().unwrap()
 }
 
-#[derive(Debug, Logos, PartialEq)]
+fn lex_bool(lex: &mut Lexer<LibrettoLogicToken>) -> bool {
+    let content = lex.slice().to_string();
+    content.as_str() == "true"
+}
+
+impl<'a> Ordinal for LibrettoLogicToken {}
+
+#[derive(Debug, Logos, PartialEq, Clone, EnumDiscriminants)]
+#[strum_discriminants(name(LogicOrdinal))]
 pub enum LibrettoLogicToken {
+    #[regex("[a-zA-Z0-9_]+", lex_text, priority = 1)]
+    Identifier(String),
 
-  #[regex("[a-zA-Z0-9_]+", priority=1)]
-  Text,
+    #[regex("[0-9]+", lex_int, priority = 2)]
+    IntLiteral(i64),
 
-  #[regex("[0-9]+", lex_int, priority=2)]
-  IntLiteral(i64),
+    #[regex("[0-9]+.[0-9]+", lex_float, priority = 3)]
+    FloatLiteral(f64),
 
-  #[regex("[0-9]+.[0-9]+", lex_float, priority=3)]
-  FloatLiteral(f64),
+    #[regex("(true|false)", lex_bool)]
+    BoolLiteral(bool),
 
-  #[regex("(true|false)", lex_bool)]
-  BoolLiteral(bool),
+    #[regex("\"([^\"]*)\"", lex_string)]
+    StringLiteral(String),
 
-  #[regex("\"([^\"]*)\"", lex_string)]
-  StringLiteral(String),
+    #[token("function")]
+    Function,
 
-  #[token("function")]
-  Function,
+    #[token("if")]
+    If,
 
-  #[token("if")]
-  If,
-  
-  #[token("else")]
-  Else,
+    #[token("else")]
+    Else,
 
-  #[token("for")]
-  For,
+    #[token("for")]
+    For,
 
-  #[token("in")]
-  In,
+    #[token("in")]
+    In,
 
-  #[token("let")]
-  Let,
+    #[token("let")]
+    Let,
 
-  #[token("const")]
-  Const,
+    #[token("const")]
+    Const,
 
-  #[token("int")]
-  Int,
+    #[token("int")]
+    Int,
 
-  #[token("float")]
-  Float,
+    #[token("float")]
+    Float,
 
-  #[token("string")]
-  String,
+    #[token("string")]
+    String,
 
-  #[token("bool")]
-  Bool,
+    #[token("bool")]
+    Bool,
 
-  #[token("{")]
-  LeftCurlyBracket,
+    #[token("{")]
+    LeftCurlyBracket,
 
-  #[token("}")]
-  RightCurlyBracket,
+    #[token("}")]
+    RightCurlyBracket,
 
-  #[token("[")]
-  LeftBracket,
+    #[token("[")]
+    LeftBracket,
 
-  #[token("]")]
-  RightBracket,
+    #[token("]")]
+    RightBracket,
 
-  #[token("(")]
-  LeftParen,
+    #[token("(")]
+    LeftParen,
 
-  #[token(")")]
-  RightParen,
+    #[token(")")]
+    RightParen,
 
-  #[token(".")]
-  Period,
+    #[token(".")]
+    Period,
 
-  #[token(",")]
-  Comma,
+    #[token(",")]
+    Comma,
 
-  #[token(":")]
-  Colon,
+    #[token(":")]
+    Colon,
 
-  #[token("==", priority=2)]
-  Equality,
+    #[token("==", priority = 2)]
+    Equality,
 
-  #[token("<=", priority=2)]
-  LessThanEquality,
+    #[token("<=", priority = 2)]
+    LessThanEquality,
 
-  #[token(">=", priority=2)]
-  GreaterThanEquality,
+    #[token(">=", priority = 2)]
+    GreaterThanEquality,
 
-  #[token("<")]
-  LessThan,
+    #[token("<")]
+    LessThan,
 
-  #[token(">")]
-  GreaterThan,
+    #[token(">")]
+    GreaterThan,
 
-  #[token("+")]
-  Add,
+    #[token("+")]
+    Add,
 
-  #[token("-")]
-  Sub,
+    #[token("-")]
+    Sub,
 
-  #[token("*")]
-  Mult,
+    #[token("*")]
+    Mult,
 
-  #[token("/")]
-  Div,
+    #[token("/")]
+    Div,
 
-  #[token("=")]
-  Equals,
+    #[token("=")]
+    Equals,
 
-  #[regex(r"[ \t\n\f]+", logos::skip)]
-  Whitespace,
+    #[regex(r"[ \t\n\f]+", logos::skip)]
+    Whitespace,
 
-  #[error]
-  Error
+    #[error]
+    Error,
 }
 
 //==================================================================================================
 //          Libretto Quote Token - Quote Level Lexing
 //==================================================================================================
 
-fn as_logic_for_quote<'a>(lex : &mut Lexer<'a, LibrettoQuoteToken>) -> Vec<LibrettoLogicToken> {
-  let content = lex.slice();
-  let content = &content[1..content.len()-1];
-  let logic_lex = LibrettoLogicToken::lexer(content);
-  let tokens = logic_lex.collect::<Vec<LibrettoLogicToken>>();
-  tokens
+fn as_logic_for_quote<'a>(
+    lex: &mut Lexer<'a, LibrettoQuoteToken<'a>>,
+) -> LibrettoTokenQueue<'a, LibrettoLogicToken> {
+    let content = lex.slice();
+    let content = &content[1..content.len() - 1];
+    let logic_lex = LibrettoLogicToken::lexer(content);
+    logic_lex.into()
 }
 
-fn start_tag<'a>(lex: &mut Lexer<'a, LibrettoQuoteToken>) -> String {
-  let content = lex.slice();
-  let content = &content[1..content.len()-1];
-  content.to_string()
-}
+impl<'a> Ordinal for LibrettoQuoteToken<'a> {}
 
-fn end_tag<'a>(lex: &mut Lexer<'a, LibrettoQuoteToken>) -> String {
-  let content = lex.slice();
-  let content = &content[2..content.len()-1];
-  content.to_string()
-}
-
-#[derive(Debug, Logos, PartialEq)]
-pub enum LibrettoQuoteToken {
-
-  #[regex(r"\[[a-zA-Z]*\]", start_tag, priority=2)] 
-  StartTag(String),
-
-  #[regex(r"\[/[a-zA-Z]*\]", end_tag, priority=1)]
-  EndTag(String), 
-
-  //select any character and space combination ending with either a period, colon, exclamation mark, or question mark.
-  #[regex(r"[\w\s(.|!|?|:|;)]+", priority=2)]
-  Text,
+#[derive(Debug, Logos, PartialEq, Clone, EnumDiscriminants)]
+#[strum_discriminants(name(QuoteOrdinal))]
+pub enum LibrettoQuoteToken<'a> {
+    // #[regex("[^\\]?[")]
+    // LeftBracket,
+    #[token("]")]
+    RightBracket,
 
   #[regex(r"<([^><]*)>", as_logic_for_quote)]
   Logic(Vec::<LibrettoLogicToken>),
 
-  #[error]
-  Error
+    #[error]
+    Error,
 }
 
 #[cfg(test)]
