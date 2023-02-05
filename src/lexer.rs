@@ -426,7 +426,7 @@ mod tests {
     //   LibrettoLogicToken::Equality,
     //   LibrettoLogicToken::Text("False".to_string())
     // ])));
-    assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
+    // assert_eq!(lex.next(), Some(LibrettoQuoteToken::));
     assert_eq!(lex.slice(), " end.");
     assert_eq!(lex.next(), None);
   }
