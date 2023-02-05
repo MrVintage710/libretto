@@ -1,5 +1,5 @@
 mod logic_let;
-mod logic_unary;
+mod logic_expr;
 mod logic_value;
 
 use logos::{Lexer, Logos};
@@ -35,6 +35,15 @@ where
     Self: Sized,
 {
     fn parse(queue: &mut LibrettoTokenQueue<'a, T>) -> ParseResult<Self>;
+
+    fn checked_parse(queue: &mut LibrettoTokenQueue<'a, T>) -> Option<Self> {
+        let result = Self::parse(queue);
+        match result {
+            ParseResult::Parsed(value) => Some(value),
+            ParseResult::Error(err) => panic!("Error durring parse: {}", err),
+            ParseResult::Failure => None,
+        }
+    }
 }
 
 pub trait LibrettoEvaluator {

@@ -1,6 +1,6 @@
 use logos::{Lexer, Logos};
 use peekmore::{PeekMore, PeekMoreIterator};
-use std::{fmt::Debug};
+use std::{fmt::Debug, marker::PhantomData};
 use strum::EnumDiscriminants;
 
 //==================================================================================================
@@ -108,6 +108,25 @@ pub trait Ordinal: Sized + Clone {
         ordinal == other
     }
 }
+
+//==================================================================================================
+//          Ordinal Groups
+//==================================================================================================
+
+pub struct OrdinalGroup<'a, T, D> where T: Logos<'a> + PartialEq + Clone + Ordinal, T::Extras: Clone,  D: From<T> + PartialEq + Copy {
+    tokens : Vec<D>,
+    _phantom : &'a PhantomData<T>
+}
+
+impl <'a, D, T, const COUNT : usize> From<[D; COUNT]> for OrdinalGroup<'a, T, D> where T: Logos<'a> + PartialEq + Clone + Ordinal, T::Extras: Clone, D: From<T> + PartialEq + Copy {
+    fn from(value: [D; COUNT]) -> Self {
+        OrdinalGroup { tokens: Vec::from(value), _phantom: &PhantomData }
+    }
+}
+
+// impl <'a, D, T> OrdinalGroup<'a, T, D> where T: Logos<'a> + PartialEq + Clone + Ordinal, T::Extras: Clone, D: From<T> + PartialEq + Copy {
+//     fn 
+// }
 
 //==================================================================================================
 //          Libretto Token - Top Level Lexing
