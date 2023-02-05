@@ -51,42 +51,45 @@ where
 
 impl<'a, T> LibrettoTokenQueue<'a, T>
 where
-    T: Logos<'a> + PartialEq + Clone + Ordinal,
+    T: Logos<'a> + PartialEq + Clone + Ordinal + 'a,
     T::Extras: Clone,
 {
-    pub fn next_is<D: From<T> + PartialEq>(&mut self, ordinal: D) -> bool where {
+    pub fn next_is<D: From<T> + PartialEq + Copy>(&mut self, ordinal_group: impl Into<OrdinalGroup<'a, T, D>>) -> bool {
         let next = self.iterator.peek();
         if next.is_none() {
             return false;
         }
         let t = next.unwrap();
-        t.check_ordinal(ordinal)
+        let ordinal_group : OrdinalGroup<'a, T, D> = ordinal_group.into();
+        ordinal_group.check_ordinal(t)
     }
 
-    pub fn next_nth_is<D: From<T> + PartialEq>(&mut self, ordinal: D, n: usize) -> bool {
+    pub fn next_nth_is<D: From<T> + PartialEq + Copy>(&mut self, ordinal_group: impl Into<OrdinalGroup<'a, T, D>>, n: usize) -> bool {
         let next = self.iterator.peek_nth(n);
         if next.is_none() {
             return false;
         }
         let t = next.unwrap();
-        t.check_ordinal(ordinal)
+        let ordinal_group : OrdinalGroup<'a, T, D> = ordinal_group.into();
+        ordinal_group.check_ordinal(t)
     }
 
     pub fn pop(&mut self) -> Option<T> {
         self.iterator.next()
     }
 
-    pub fn pop_if<D: From<T> + PartialEq>(&mut self, ordinal: D) -> Option<T> {
-        if self.next_is(ordinal) {
+    pub fn pop_if_next_is<D: From<T> + PartialEq + Copy>(&mut self, ordinal_group: impl Into<OrdinalGroup<'a, T, D>>) -> Option<T> {
+        if self.next_is(ordinal_group) {
             self.pop()
         } else {
             None
         }
     }
 
-    pub fn pop_until<D: From<T> + PartialEq + Copy>(&mut self, ordinal: D) -> Vec<T> {
+    pub fn pop_until<D: From<T> + PartialEq + Copy>(&mut self, ordinal_group: impl Into<OrdinalGroup<'a, T, D>>) -> Vec<T> {
         let mut tokens = Vec::new();
-        while(!self.next_is(ordinal)) {
+        let ordinal_group : OrdinalGroup<'a, T, D> = ordinal_group.into();
+        while(!self.next_is(ordinal_group.clone())) {
             if let Some(token) = self.pop() {
                 tokens.push(token)
             }
@@ -113,6 +116,7 @@ pub trait Ordinal: Sized + Clone {
 //          Ordinal Groups
 //==================================================================================================
 
+#[derive(Clone)]
 pub struct OrdinalGroup<'a, T, D> where T: Logos<'a> + PartialEq + Clone + Ordinal, T::Extras: Clone,  D: From<T> + PartialEq + Copy {
     tokens : Vec<D>,
     _phantom : &'a PhantomData<T>
@@ -124,9 +128,23 @@ impl <'a, D, T, const COUNT : usize> From<[D; COUNT]> for OrdinalGroup<'a, T, D>
     }
 }
 
-// impl <'a, D, T> OrdinalGroup<'a, T, D> where T: Logos<'a> + PartialEq + Clone + Ordinal, T::Extras: Clone, D: From<T> + PartialEq + Copy {
-//     fn 
-// }
+impl <'a, D, T> From<D> for OrdinalGroup<'a, T, D> where T: Logos<'a> + PartialEq + Clone + Ordinal, T::Extras: Clone, D: From<T> + PartialEq + Copy {
+    fn from(value: D) -> Self {
+        let mut tokens = Vec::new();
+        tokens.push(value);
+        OrdinalGroup { tokens, _phantom: &PhantomData }
+    }
+}
+
+impl <'a, D, T> OrdinalGroup<'a, T, D> where T: Logos<'a> + PartialEq + Clone + Ordinal, T::Extras: Clone, D: From<T> + PartialEq + Copy {
+    fn check_ordinal(&self, token : &T) -> bool {
+        for inner in self.tokens.iter() {
+            if token.check_ordinal(*inner) {return true}
+        }
+
+        false
+    }
+}
 
 //==================================================================================================
 //          Libretto Token - Top Level Lexing

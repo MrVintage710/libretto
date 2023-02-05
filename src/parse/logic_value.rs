@@ -49,11 +49,12 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
         //First we check if the next token is one of the following:
         //String Literal, Bool Literal, Float Literal, Int Literal, Identifier
         //If is isn't any of those, return a failure.
-        if !(queue.next_is(LogicOrdinal::StringLiteral)
-            || queue.next_is(LogicOrdinal::BoolLiteral)
-            || queue.next_is(LogicOrdinal::FloatLiteral)
-            || queue.next_is(LogicOrdinal::IntLiteral)
-            || queue.next_is(LogicOrdinal::Identifier))
+        if !queue.next_is([
+            LogicOrdinal::StringLiteral,
+            LogicOrdinal::BoolLiteral,
+            LogicOrdinal::FloatLiteral,
+            LogicOrdinal::IntLiteral,
+            LogicOrdinal::Identifier])   
         {
             return ParseResult::Failure;
         }

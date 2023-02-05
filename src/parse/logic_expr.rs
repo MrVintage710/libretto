@@ -14,7 +14,7 @@ pub struct LogicUnaryExpr {
 
 impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
     fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> ParseResult<Self> {
-        let is_negative = queue.pop_if(LogicOrdinal::Sub).is_some();
+        let is_negative = queue.pop_if_next_is(LogicOrdinal::Sub).is_some();
         let result = LogicValue::parse(queue);
 
         match result {
