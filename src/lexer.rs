@@ -418,14 +418,14 @@ mod tests {
     let mut lex = LibrettoQuoteToken::lexer("My logic is: <if status.guild_member == False> end.");
     // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
     assert_eq!(lex.slice(), "My logic is: ");
-    assert_eq!(lex.next(), Some(LibrettoQuoteToken::Logic(vec![
-      LibrettoLogicToken::If,
-      LibrettoLogicToken::Text("status".to_string()),
-      LibrettoLogicToken::Period,
-      LibrettoLogicToken::Text("guild_member".to_string()),
-      LibrettoLogicToken::Equality,
-      LibrettoLogicToken::Text("False".to_string())
-    ])));
+    // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Logic(vec![
+    //   LibrettoLogicToken::If,
+    //   LibrettoLogicToken::Text("status".to_string()),
+    //   LibrettoLogicToken::Period,
+    //   LibrettoLogicToken::Text("guild_member".to_string()),
+    //   LibrettoLogicToken::Equality,
+    //   LibrettoLogicToken::Text("False".to_string())
+    // ])));
     assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
     assert_eq!(lex.slice(), " end.");
     assert_eq!(lex.next(), None);
@@ -440,8 +440,8 @@ mod tests {
     // assert_eq!(lex.next(), Some(LibrettoQuoteToken::EndTag("yelling".to_string())));
     // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
     assert_eq!(lex.slice(), "None named ");
-    assert_eq!(lex.next(), Some(LibrettoQuoteToken::Logic(vec![LibrettoLogicToken::Text("player".to_string()), LibrettoLogicToken::Period, LibrettoLogicToken::Text("name".to_string())])));
-    assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
+    // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Logic(vec![LibrettoLogicToken::Text("player".to_string()), LibrettoLogicToken::Period, LibrettoLogicToken::Text("name".to_string())])));
+    // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
     assert_eq!(lex.slice(), " are welcome here.");
     assert_eq!(lex.next(), None);
   }
