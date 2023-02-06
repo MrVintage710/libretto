@@ -28,7 +28,7 @@ use crate::{
 /// ``` () : string { return "Hello World!" } ```
 /// 
 /// Evaluates to Lson obj containing these values
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum LogicValue {
     Literal(Lson),
     Variable(String),
@@ -42,23 +42,29 @@ impl From<Lson> for LogicValue {
 
 
 impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
-    
-    ///Parse a LogicValue Object from a Token Queue
-    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> ParseResult<Self> {
 
-        //First we check if the next token is one of the following:
+    fn check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
+        
+        //Check if the next token is one of the following:
         //String Literal, Bool Literal, Float Literal, Int Literal, Identifier
-        //If is isn't any of those, return a failure.
-        if !queue.next_is([
+        //If it is, move the queue cursor forward by 1 and return true, else return false
+        if queue.next_is([
             LogicOrdinal::StringLiteral,
             LogicOrdinal::BoolLiteral,
             LogicOrdinal::FloatLiteral,
             LogicOrdinal::IntLiteral,
-            LogicOrdinal::Identifier])   
+            LogicOrdinal::Identifier])
         {
-            return ParseResult::Failure;
+            queue.forward(1);
+            true
+        } else {
+            false
         }
-
+    }
+    
+    ///Parse a LogicValue Object from a Token Queue
+    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> ParseResult<Self> {
+        
         //Now we pop the token, and return a Parsed(LogicValue) with the token type inside
         //Later on this method will also hold values for objects and arrays, however 
         //parsing for those structures has not been implemented yet.
@@ -102,7 +108,7 @@ mod tests {
     fn parse_logic_literal() {
         let mut lex = LibrettoLogicToken::lexer("true");
         let mut queue = LibrettoTokenQueue::from(lex);
-        let ast = LogicValue::parse(&mut queue).unwrap();
+        let ast = LogicValue::checked_parse(&mut queue).unwrap();
         println!("{:?}", ast)
     }
 }

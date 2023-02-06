@@ -34,14 +34,20 @@ where
     T::Extras: Clone,
     Self: Sized,
 {
+    fn check(queue: &mut LibrettoTokenQueue<'a, T>) -> bool;
+
     fn parse(queue: &mut LibrettoTokenQueue<'a, T>) -> ParseResult<Self>;
 
     fn checked_parse(queue: &mut LibrettoTokenQueue<'a, T>) -> Option<Self> {
-        let result = Self::parse(queue);
-        match result {
-            ParseResult::Parsed(value) => Some(value),
-            ParseResult::Error(err) => panic!("Error durring parse: {}", err),
-            ParseResult::Failure => None,
+        if Self::check(queue) {
+            let result = Self::parse(queue);
+            match result {
+                ParseResult::Parsed(value) => Some(value),
+                ParseResult::Error(err) => panic!("Error durring parse: {}", err),
+                ParseResult::Failure => None,
+            }    
+        } else {
+            None
         }
     }
 }

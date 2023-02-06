@@ -23,7 +23,7 @@ where
 {
     fn from(value: Lexer<'a, T>) -> Self {
         LibrettoTokenQueue {
-            iterator: value.peekmore(),
+            iterator: value.peekmore()
         }
     }
 }
@@ -54,6 +54,18 @@ where
     T: Logos<'a> + PartialEq + Clone + Ordinal + 'a,
     T::Extras: Clone,
 {
+    pub fn forward(&mut self, n : usize) {
+        self.iterator.advance_cursor_by(n);
+    }
+
+    pub fn backward(&mut self, n : usize) {
+        self.iterator.move_cursor_back_or_reset(n);
+    }
+
+    pub fn reset_cursor(&mut self) {
+        self.iterator.reset_cursor()
+    }
+
     pub fn next_is<D: From<T> + PartialEq + Copy>(&mut self, ordinal_group: impl Into<OrdinalGroup<'a, T, D>>) -> bool {
         let next = self.iterator.peek();
         if next.is_none() {
@@ -314,6 +326,9 @@ pub enum LibrettoLogicToken {
 
     #[token(".")]
     Period,
+
+    #[token("!")]
+    Bang,
 
     #[token(",")]
     Comma,
