@@ -23,7 +23,7 @@ where
 {
     fn from(value: Lexer<'a, T>) -> Self {
         LibrettoTokenQueue {
-            iterator: value.into_iter().peekmore(),
+            iterator: value.peekmore(),
         }
     }
 }
