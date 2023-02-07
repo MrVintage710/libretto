@@ -23,7 +23,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
 
         //for now
         queue.reset_cursor();
-        let option_operator = queue.pop_if_next_is(LogicOrdinal::Sub);
+        let option_operator = queue.pop_if_next_is([LogicOrdinal::Sub, LogicOrdinal::Bang]);
         let result = LogicValue::parse(queue);
 
         match result {
@@ -68,16 +68,25 @@ pub struct LogicAdditiveExpr {
 
 impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAdditiveExpr {
     fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> ParseResult<Self> {
-        let lhs = LogicUnaryExpr::checked_parse(queue);
-        if lhs.is_none() {return ParseResult::Failure}
-
-        if !queue.next_is([LogicOrdinal::Add, LogicOrdinal::Sub]) {}
+        queue.reset_cursor();
+        let lhs = {
+            let result = LogicValue::parse(queue);
+            match result {
+                ParseResult::Parsed(value) => value,
+                ParseResult::Error(err) => return ParseResult::Error(err),
+                ParseResult::Failure => return ParseResult::Failure,
+            }
+        };
 
         ParseResult::Failure
     }
 
     fn check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
-        todo!()
+        if !LogicValue::check(queue) {return false};
+        if !queue.next_is([LogicOrdinal::Add, LogicOrdinal::Sub]) {return false;};
+        queue.forward(1);
+        if !LogicValue::check(queue) {return false};
+        true
     }
 }
 
@@ -96,44 +105,52 @@ mod tests {
 
     use super::{LogicValue, LogicUnaryExpr, UnaryOperator};
 
-    #[test]
-    fn check_unary_expr() {
-        let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer("-3.14"));
+    fn check_expr(source : &str) {
+        let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
         let check = LogicUnaryExpr::check(&mut queue);
         assert!(check);
+    }
 
-        let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer("!false"));
-        let check = LogicUnaryExpr::check(&mut queue);
-        assert!(check);
-
-        let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer("3.14"));
-        let check = LogicUnaryExpr::check(&mut queue);
-        assert!(check);
-
-        let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer("false"));
-        let check = LogicUnaryExpr::check(&mut queue);
-        assert!(check);
-
-        let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer("!!false"));
-        let check = LogicUnaryExpr::check(&mut queue);
-        assert!(!check);
-
-        let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer("function"));
+    fn check_expr_inv(source : &str) {
+        let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
         let check = LogicUnaryExpr::check(&mut queue);
         assert!(!check);
     }
 
     #[test]
+    fn check_unary_expr() {
+        check_expr("-3.14");
+        check_expr("!false");
+        check_expr("3.14");
+        check_expr("false");
+
+        check_expr_inv("!!false");
+        check_expr_inv("function");
+    }
+
+    #[test]
     fn parse_unary_expr() {
-        fn parse_check(source : &str, operator : Option<UnaryOperator>, ) {}
-        let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer("-3.14"));
-        let parse = LogicUnaryExpr::parse(&mut queue);
-        if let ParseResult::Parsed(expr) = parse {
-            assert!(expr.operator.is_some());
-            assert_eq!(expr.operator.unwrap(), UnaryOperator::Negative);
-            assert_eq!(expr.value, LogicValue::Literal(Lson::Float(3.14)))
-        } else {
-            assert!(false)
+        fn parse_check(source : &str, operator : Option<UnaryOperator>, value : Lson) {
+            let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
+            let parse = LogicUnaryExpr::parse(&mut queue);
+            if let ParseResult::Parsed(expr) = parse {
+                assert_eq!(expr.operator, operator);
+                assert_eq!(expr.value, LogicValue::Literal(value))
+            } else {
+                assert!(false)
+            }
         }
+        
+        parse_check("-3.14", Some(UnaryOperator::Negative), Lson::Float(3.14));
+        parse_check("!false", Some(UnaryOperator::Bang), Lson::Bool(false));
+        parse_check("3.14", None, Lson::Float(3.14));
+        parse_check("true", None, Lson::Bool(true));
+    }
+
+    #[test]
+    fn check_binary_expr() {
+        check_expr("1 + 1");
+        check_expr("false + true");
+        check_expr("\"Hello\" + \"world!\"")
     }
 }

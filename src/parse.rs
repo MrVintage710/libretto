@@ -3,7 +3,7 @@ mod logic_expr;
 mod logic_value;
 
 use logos::{Lexer, Logos};
-use std::process::Output;
+use std::{process::Output, fmt::{Debug, Display}};
 
 use crate::{
     lexer::{LibrettoTokenQueue, Ordinal},
@@ -14,6 +14,26 @@ pub enum ParseResult<T> {
     Parsed(T),
     Error(String),
     Failure,
+}
+
+impl <T> Debug for ParseResult<T> where T : Debug {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Parsed(arg0) => f.debug_tuple("Parsed").field(arg0).finish(),
+            Self::Error(arg0) => f.debug_tuple("Error").field(arg0).finish(),
+            Self::Failure => write!(f, "Failure"),
+        }
+    }
+}
+
+impl <T> Display for ParseResult<T> where T : Display {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Parsed(arg0) => f.debug_tuple("Parsed").finish(),
+            Self::Error(arg0) => f.debug_tuple("Error").field(arg0).finish(),
+            Self::Failure => write!(f, "Failure"),
+        }
+    }
 }
 
 impl<T> ParseResult<T> {
