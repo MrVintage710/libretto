@@ -1,4 +1,4 @@
-use super::{LibrettoParsable, ParseResult};
+use super::{LibrettoParsable, ParseResult, LibrettoCompileError, LibrettoCompileResult};
 use crate::{
     lexer::{self, LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal},
     logic::lson::Lson,
@@ -90,6 +90,14 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
         } else {
             ParseResult::Failure
         }
+    }
+
+    fn validate(&self) -> LibrettoCompileResult<()> {
+        if let Self::Literal(Lson::None) = self {
+            return Err(LibrettoCompileError::NullValueError);
+        }
+
+        Ok(())
     }
 }
 

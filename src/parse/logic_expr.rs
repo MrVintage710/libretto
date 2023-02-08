@@ -1,4 +1,4 @@
-use crate::lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal};
+use crate::{lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal}, validate_ast, parse_ast};
 
 use super::{logic_value::LogicValue, LibrettoParsable, ParseResult};
 
@@ -53,6 +53,11 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
             false
         }
     }
+
+    fn validate(&self) -> super::LibrettoCompileResult<()> {
+        validate_ast!(self.value);
+        Ok(())
+    }
 }
 
 //==================================================================================================
@@ -62,21 +67,28 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
 #[derive(Debug)]
 pub struct LogicAdditiveExpr {
     lhs : LogicUnaryExpr,
-    rhs : LogicUnaryExpr,
+    rhs : Option<LogicUnaryExpr>,
     is_adding : bool
 }
 
 impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAdditiveExpr {
     fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> ParseResult<Self> {
+        //This needs work
+        
         queue.reset_cursor();
-        let lhs = {
-            let result = LogicValue::parse(queue);
-            match result {
-                ParseResult::Parsed(value) => value,
-                ParseResult::Error(err) => return ParseResult::Error(err),
-                ParseResult::Failure => return ParseResult::Failure,
-            }
-        };
+        let lhs = parse_ast!(LogicUnaryExpr, queue);
+        let operator = queue.pop_if_next_is([LogicOrdinal::Add, LogicOrdinal::Sub]);
+        let rhs = parse_ast!(LogicUnaryExpr, queue);
+
+        if let Some(operator) = operator {
+            let is_adding = match operator {
+                LibrettoLogicToken::Add => true,
+                LibrettoLogicToken::Sub => false,
+                _ => return ParseResult::Error("Not a valid operator".to_owned())
+            };
+
+            return ParseResult::Parsed(LogicAdditiveExpr { lhs, rhs: Some(rhs), is_adding});
+        }
 
         ParseResult::Failure
     }
@@ -87,6 +99,11 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAdditiveExpr {
         queue.forward(1);
         if !LogicValue::check(queue) {return false};
         true
+    }
+
+    fn validate(&self) -> super::LibrettoCompileResult<()> {
+        validate_ast!(self.lhs);
+        Ok(())
     }
 }
 

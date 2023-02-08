@@ -11,3 +11,4 @@ logos = "0.12.1"
 serde = "1.0.152"
 peekmore = "1.0.0"
 strum = { version = "0.24", features = ["derive"] }
+thiserror = "1.0"

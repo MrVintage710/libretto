@@ -2,7 +2,8 @@ mod logic_let;
 mod logic_expr;
 mod logic_value;
 
-use logos::{Lexer, Logos};
+use logos::{Logos};
+use thiserror::Error;
 use std::{process::Output, fmt::{Debug, Display}};
 
 use crate::{
@@ -58,6 +59,8 @@ where
 
     fn parse(queue: &mut LibrettoTokenQueue<'a, T>) -> ParseResult<Self>;
 
+    fn validate(&self) -> LibrettoCompileResult<()>;
+
     fn checked_parse(queue: &mut LibrettoTokenQueue<'a, T>) -> Option<Self> {
         if Self::check(queue) {
             let result = Self::parse(queue);
@@ -76,4 +79,43 @@ pub trait LibrettoEvaluator {
     type Output;
 
     fn evaluate(&self, runtime: &mut LibrettoRuntime) -> Output;
+}
+
+pub type LibrettoCompileResult<T> = Result<T, LibrettoCompileError>;
+
+#[derive(Error, Debug)]
+pub enum LibrettoCompileError {
+    #[error("Values are not allowed to be set to null.")]
+    NullValueError
+}
+
+#[macro_export]
+macro_rules! validate_ast {
+    ($ast:expr) => {
+        {
+            let result = $ast.validate();
+            match result {
+                Err(e) => {return Err(e)},
+                _ => {}
+            };
+        }
+    };
+}
+
+/// This macro will parse a token from the Queue given a type.
+/// If there is a error, it returns the error.
+/// If there is a failure, it resturns the failure.
+/// If it parses successfully, the value is passed back.
+#[macro_export]
+macro_rules! parse_ast {
+    ($ast:path, $queue:expr) => {
+        {
+            let result = <$ast>::parse($queue);
+            match result {
+                ParseResult::Parsed(value) => value,
+                ParseResult::Error(err) => return ParseResult::Error(err),
+                ParseResult::Failure => return ParseResult::Failure,
+            }
+        }
+    };
 }
