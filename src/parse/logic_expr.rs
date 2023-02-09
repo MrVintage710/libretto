@@ -1,6 +1,6 @@
-use crate::{lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal}, validate_ast, parse_ast};
+use crate::{lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal}, parse_ast};
 
-use super::{logic_value::LogicValue, LibrettoParsable, ParseResult};
+use super::{logic_value::LogicValue, LibrettoParsable, ParseResult, LibrettoCompileError};
 
 //==================================================================================================
 //          Logic Unary Expression
@@ -22,7 +22,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
     fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> ParseResult<Self> {
 
         //for now
-        queue.reset_cursor();
+        queue.reset();
         let option_operator = queue.pop_if_next_is([LogicOrdinal::Sub, LogicOrdinal::Bang]);
         let result = LogicValue::parse(queue);
 
@@ -44,19 +44,15 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
         }
     }
 
-    fn check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
+    fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
         let mut operator_space = 0;
-        if queue.next_is([LogicOrdinal::Bang, LogicOrdinal::Sub]) { operator_space = 1; queue.forward(1); };
-        if LogicValue::check(queue) { return true } 
-        else {
-            queue.backward(operator_space);
-            false
-        }
+        queue.next_is([LogicOrdinal::Bang, LogicOrdinal::Sub]);
+        if LogicValue::raw_check(queue) { return true } 
+        else {false}
     }
 
-    fn validate(&self) -> super::LibrettoCompileResult<()> {
-        validate_ast!(self.value);
-        Ok(())
+    fn validate(&self, errors : &mut Vec<LibrettoCompileError>) {
+        todo!()
     }
 }
 
@@ -75,7 +71,7 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAdditiveExpr {
     fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> ParseResult<Self> {
         //This needs work
         
-        queue.reset_cursor();
+        queue.reset();
         let lhs = parse_ast!(LogicUnaryExpr, queue);
         let operator = queue.pop_if_next_is([LogicOrdinal::Add, LogicOrdinal::Sub]);
         let rhs = parse_ast!(LogicUnaryExpr, queue);
@@ -93,17 +89,16 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAdditiveExpr {
         ParseResult::Failure
     }
 
-    fn check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
-        if !LogicValue::check(queue) {return false};
+    fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
+        if !LogicValue::raw_check(queue) {return false};
         if !queue.next_is([LogicOrdinal::Add, LogicOrdinal::Sub]) {return false;};
-        queue.forward(1);
-        if !LogicValue::check(queue) {return false};
+        LogicValue::raw_check(queue);
+        queue.mark();
         true
     }
 
-    fn validate(&self) -> super::LibrettoCompileResult<()> {
-        validate_ast!(self.lhs);
-        Ok(())
+    fn validate(&self, errors : &mut Vec<LibrettoCompileError>) {
+        todo!()
     }
 }
 
@@ -124,13 +119,13 @@ mod tests {
 
     fn check_expr(source : &str) {
         let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
-        let check = LogicUnaryExpr::check(&mut queue);
+        let check = LogicUnaryExpr::raw_check(&mut queue);
         assert!(check);
     }
 
     fn check_expr_inv(source : &str) {
         let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
-        let check = LogicUnaryExpr::check(&mut queue);
+        let check = LogicUnaryExpr::raw_check(&mut queue);
         assert!(!check);
     }
 
@@ -168,6 +163,8 @@ mod tests {
     fn check_binary_expr() {
         check_expr("1 + 1");
         check_expr("false + true");
-        check_expr("\"Hello\" + \"world!\"")
+        check_expr("\"Hello\" + \"world!\"");
+        check_expr("1");
+        check_expr("false");
     }
 }

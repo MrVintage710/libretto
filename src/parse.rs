@@ -1,6 +1,7 @@
 mod logic_let;
 mod logic_expr;
 mod logic_value;
+mod util;
 
 use logos::{Logos};
 use thiserror::Error;
@@ -51,18 +52,29 @@ impl<T> ParseResult<T> {
 
 pub trait LibrettoParsable<'a, T>
 where
-    T: Logos<'a> + PartialEq + Ordinal + Clone,
+    T: Logos<'a> + PartialEq + Ordinal + Clone + 'a,
     T::Extras: Clone,
     Self: Sized,
 {
-    fn check(queue: &mut LibrettoTokenQueue<'a, T>) -> bool;
+    ///This function will check the token queue 
+    fn raw_check(queue: &mut LibrettoTokenQueue<'a, T>) -> bool;
 
     fn parse(queue: &mut LibrettoTokenQueue<'a, T>) -> ParseResult<Self>;
 
-    fn validate(&self) -> LibrettoCompileResult<()>;
+    fn validate(&self, errors : &mut Vec<LibrettoCompileError>);
+
+    fn check(queue: &mut LibrettoTokenQueue<'a, T>) -> bool {
+        if Self::raw_check(queue) {
+            queue.mark();
+            true
+        } else {
+            queue.rewind();
+            false
+        }
+    }
 
     fn checked_parse(queue: &mut LibrettoTokenQueue<'a, T>) -> Option<Self> {
-        if Self::check(queue) {
+        if Self::raw_check(queue) {
             let result = Self::parse(queue);
             match result {
                 ParseResult::Parsed(value) => Some(value),
@@ -89,18 +101,18 @@ pub enum LibrettoCompileError {
     NullValueError
 }
 
-#[macro_export]
-macro_rules! validate_ast {
-    ($ast:expr) => {
-        {
-            let result = $ast.validate();
-            match result {
-                Err(e) => {return Err(e)},
-                _ => {}
-            };
-        }
-    };
-}
+// #[macro_export]
+// macro_rules! validate_ast {
+//     ($ast:expr) => {
+//         {
+//             let result = $ast.validate();
+//             match result {
+//                 Err(e) => {return Err(e)},
+//                 _ => {}
+//             };
+//         }
+//     };
+// }
 
 /// This macro will parse a token from the Queue given a type.
 /// If there is a error, it returns the error.

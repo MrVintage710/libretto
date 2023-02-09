@@ -14,6 +14,7 @@ where
     T::Extras: Clone,
 {
     iterator: PeekMoreIterator<Lexer<'a, T>>,
+    cursor : usize
 }
 
 impl<'a, T> From<Lexer<'a, T>> for LibrettoTokenQueue<'a, T>
@@ -23,7 +24,8 @@ where
 {
     fn from(value: Lexer<'a, T>) -> Self {
         LibrettoTokenQueue {
-            iterator: value.peekmore()
+            iterator: value.peekmore(),
+            cursor : 0
         }
     }
 }
@@ -54,39 +56,55 @@ where
     T: Logos<'a> + PartialEq + Clone + Ordinal + 'a,
     T::Extras: Clone,
 {
-    pub fn forward(&mut self, n : usize) {
-        self.iterator.advance_cursor_by(n);
+    pub fn rewind(&mut self) {
+        self.cursor = 0;
     }
 
-    pub fn backward(&mut self, n : usize) {
-        self.iterator.move_cursor_back_or_reset(n);
+    pub fn mark(&mut self) {
+        self.iterator.advance_cursor_by(self.cursor);
+        self.cursor = 0
     }
 
-    pub fn reset_cursor(&mut self) {
-        self.iterator.reset_cursor()
+    pub fn reset(&mut self) {
+        self.iterator.reset_cursor();
+        self.cursor = 0;
+    }
+
+    pub fn cursor(&self) -> usize {
+        self.cursor
+    }
+
+    /// Gives the count of the queue. WARNING: This clones the iterator. Very Slow
+    pub fn length(&self) -> usize {
+        self.iterator.clone().count()
     }
 
     pub fn next_is<D: From<T> + PartialEq + Copy>(&mut self, ordinal_group: impl Into<OrdinalGroup<'a, T, D>>) -> bool {
-        let next = self.iterator.peek();
+        let next = self.iterator.peek_nth(self.cursor);
         if next.is_none() {
             return false;
         }
         let t = next.unwrap();
         let ordinal_group : OrdinalGroup<'a, T, D> = ordinal_group.into();
-        ordinal_group.check_ordinal(t)
+        let next_is = ordinal_group.check_ordinal(t);
+        if next_is {self.cursor += 1};
+        next_is
     }
 
     pub fn next_nth_is<D: From<T> + PartialEq + Copy>(&mut self, ordinal_group: impl Into<OrdinalGroup<'a, T, D>>, n: usize) -> bool {
-        let next = self.iterator.peek_nth(n);
+        let next = self.iterator.peek_nth(self.cursor + n);
         if next.is_none() {
             return false;
         }
         let t = next.unwrap();
         let ordinal_group : OrdinalGroup<'a, T, D> = ordinal_group.into();
-        ordinal_group.check_ordinal(t)
+        let next_is = ordinal_group.check_ordinal(t);
+        if next_is {self.cursor += 1};
+        next_is
     }
 
     pub fn pop(&mut self) -> Option<T> {
+        if self.cursor != 0 {self.cursor -= 1};
         self.iterator.next()
     }
 
