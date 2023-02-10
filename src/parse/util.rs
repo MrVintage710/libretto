@@ -55,7 +55,7 @@ impl <'a, P> LibrettoParsable<'a, LibrettoLogicToken> for ParseCommaSeparatedLis
 
 #[cfg(test)]
 mod tests {
-    use crate::{parse::{LibrettoParsable, util::ParseCommaSeparatedList}, lexer::{LibrettoLogicToken, LibrettoTokenQueue}, logic::lson::Lson};
+    use crate::{parse::{LibrettoParsable, util::ParseCommaSeparatedList, logic_value::LogicObjectKeyValue}, lexer::{LibrettoLogicToken, LibrettoTokenQueue}, logic::lson::Lson};
     use logos::Logos;
 
     fn check_expr<'a, P : LibrettoParsable<'a, LibrettoLogicToken> + Sized>(source : &'a str, number_of_tokens : usize) {
@@ -69,9 +69,11 @@ mod tests {
         assert_eq!(queue.cursor(), number_of_tokens)
     }
 
-    fn parse_expr<'a, P : LibrettoParsable<'a, LibrettoLogicToken> + Sized>(source : &'a str) -> Option<ParseCommaSeparatedList<'a, P, LibrettoLogicToken>> {
+    fn parse_expr<'a, P : LibrettoParsable<'a, LibrettoLogicToken> + Sized>(source : &'a str) -> ParseCommaSeparatedList<'a, P, LibrettoLogicToken> {
         let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
-        ParseCommaSeparatedList::<'a, P, LibrettoLogicToken>::checked_parse(&mut queue)
+        let ast = ParseCommaSeparatedList::<'a, P, LibrettoLogicToken>::checked_parse(&mut queue);
+        assert!(ast.is_some());
+        ast.unwrap()
     }
 
     #[test]
@@ -80,13 +82,24 @@ mod tests {
         check_expr::<Lson>("false, 3.14", 3);
         check_expr::<Lson>("false, 3.14, 3", 5);
         check_expr::<Lson>("false, 3.14, 3, \"test\"", 7);
+
+        check_expr::<LogicObjectKeyValue>("key : false, another : false", 7)
     }
 
     #[test]
     fn parse_logic_list() {
-        let ast = parse_expr::<Lson>("false, 3").unwrap();
+        let ast = parse_expr::<Lson>("false, 3");
         assert_eq!(ast.values.len(), 2);
         assert_eq!(ast.values[0], Lson::Bool(false));
         assert_eq!(ast.values[1], Lson::Int(3));
+
+        let ast = parse_expr::<LogicObjectKeyValue>("key : false, value : false");
+        assert_eq!(ast.values.len(), 2);
+        let first = &ast.values[0];
+        let second = &ast.values[1];
+        assert_eq!(first.key(), "key");
+        assert_eq!(first.value(), &Lson::Bool(false));
+        assert_eq!(second.key(), "value");
+        assert_eq!(second.value(), &Lson::Bool(false));
     }
 }
