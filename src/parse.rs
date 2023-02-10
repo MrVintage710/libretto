@@ -61,7 +61,7 @@ impl<T> ParseResult<T> {
 
 pub trait LibrettoParsable<'a, T>
 where
-    T: Logos<'a> + PartialEq + Ordinal + Clone + 'a,
+    T: Logos<'a> + PartialEq + Ordinal + Clone + Debug + 'a,
     T::Extras: Clone,
     Self: Sized,
 {
@@ -83,7 +83,8 @@ where
     }
 
     fn checked_parse(queue: &mut LibrettoTokenQueue<'a, T>) -> Option<Self> {
-        if Self::raw_check(queue) {
+        queue.reset();
+        if Self::check(queue) {
             let result = Self::parse(queue);
             match result {
                 ParseResult::Parsed(value) => Some(value),

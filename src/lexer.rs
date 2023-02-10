@@ -10,7 +10,7 @@ use strum::EnumDiscriminants;
 #[derive(Clone)]
 pub struct LibrettoTokenQueue<'a, T>
 where
-    T: Logos<'a> + PartialEq + Clone + Ordinal,
+    T: Logos<'a> + PartialEq + Clone + Ordinal + Debug,
     T::Extras: Clone,
 {
     iterator: PeekMoreIterator<Lexer<'a, T>>,
@@ -19,7 +19,7 @@ where
 
 impl<'a, T> From<Lexer<'a, T>> for LibrettoTokenQueue<'a, T>
 where
-    T: Logos<'a> + PartialEq + Clone + Ordinal,
+    T: Logos<'a> + PartialEq + Clone + Ordinal + Debug,
     T::Extras: Clone,
 {
     fn from(value: Lexer<'a, T>) -> Self {
@@ -32,7 +32,7 @@ where
 
 impl<'a, T> PartialEq for LibrettoTokenQueue<'a, T>
 where
-    T: Logos<'a> + PartialEq + Clone + Ordinal,
+    T: Logos<'a> + PartialEq + Clone + Ordinal + Debug,
     T::Extras: Clone,
 {
     fn eq(&self, other: &Self) -> bool {
@@ -43,17 +43,22 @@ where
 
 impl<'a, T> Debug for LibrettoTokenQueue<'a, T>
 where
-    T: Logos<'a> + PartialEq + Clone + Ordinal,
+    T: Logos<'a> + PartialEq + Clone + Ordinal + Debug,
     T::Extras: Clone,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("[Libretto Token Queue]")
+        let proxy = self.iterator.clone();
+        let mut formater = f.debug_list();
+        for token in proxy {
+            formater.entry(&token);
+        }
+        formater.finish()
     }
 }
 
 impl<'a, T> LibrettoTokenQueue<'a, T>
 where
-    T: Logos<'a> + PartialEq + Clone + Ordinal + 'a,
+    T: Logos<'a> + PartialEq + Clone + Ordinal + Debug + Debug + 'a,
     T::Extras: Clone,
 {
     pub fn rewind(&mut self) {
@@ -125,6 +130,7 @@ where
         &mut self,
         ordinal_group: impl Into<OrdinalGroup<'a, T, D>>,
     ) -> Option<T> {
+        self.reset();
         if self.next_is(ordinal_group) {
             self.pop()
         } else {

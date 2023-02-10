@@ -1,6 +1,6 @@
 mod data;
 mod event;
-mod function;
+pub mod function;
 
 use crate::logic::lson::Lson;
 use std::collections::HashMap;

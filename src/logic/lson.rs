@@ -1,11 +1,14 @@
 use core::fmt;
 use std::{
     collections::HashMap,
-    fmt::Display,
-    ops::{self},
+    fmt::{Display, Debug},
+    ops::{self}, rc::Rc,
 };
+use crate::runtime::LibrettoRuntime;
 
-#[derive(Debug, Clone, PartialEq)]
+pub type LibrettoFunction = Rc< dyn Fn(Vec<Lson>, &mut LibrettoRuntime) -> Lson >;
+
+#[derive(Clone)]
 pub enum Lson {
     None,
     Int(i64),
@@ -14,6 +17,7 @@ pub enum Lson {
     Bool(bool),
     Array(Vec<Lson>),
     Struct(HashMap<String, Lson>),
+    Function(LibrettoFunction)
 }
 
 impl Lson {
@@ -273,8 +277,7 @@ where
     type Output = Lson;
 
     fn index(&self, index: T) -> &Lson {
-        static NULL: Lson = Lson::None;
-        index.index_into(self).unwrap_or(&NULL)
+        index.index_into(self).unwrap_or(&Lson::None)
     }
 }
 
@@ -284,6 +287,36 @@ where
 {
     fn index_mut(&mut self, index: T) -> &mut Self::Output {
         index.index_or_insert(self)
+    }
+}
+
+impl Debug for Lson {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::None => write!(f, "None"),
+            Self::Int(arg0) => f.debug_tuple("Int").field(arg0).finish(),
+            Self::Float(arg0) => f.debug_tuple("Float").field(arg0).finish(),
+            Self::String(arg0) => f.debug_tuple("String").field(arg0).finish(),
+            Self::Bool(arg0) => f.debug_tuple("Bool").field(arg0).finish(),
+            Self::Array(arg0) => f.debug_tuple("Array").field(arg0).finish(),
+            Self::Struct(arg0) => f.debug_tuple("Struct").field(arg0).finish(),
+            Self::Function(arg0) => f.debug_tuple("Function").field(&"()").finish(),
+        }
+    }
+}
+
+impl PartialEq for Lson {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Int(l0), Self::Int(r0)) => l0 == r0,
+            (Self::Float(l0), Self::Float(r0)) => l0 == r0,
+            (Self::String(l0), Self::String(r0)) => l0 == r0,
+            (Self::Bool(l0), Self::Bool(r0)) => l0 == r0,
+            (Self::Array(l0), Self::Array(r0)) => l0 == r0,
+            (Self::Struct(l0), Self::Struct(r0)) => l0 == r0,
+            (Self::Function(l0), Self::Function(r0)) => false,
+            _ => core::mem::discriminant(self) == core::mem::discriminant(other),
+        }
     }
 }
 
@@ -400,6 +433,7 @@ impl<'a> Display for Type<'a> {
             Lson::String(_) => formatter.write_str("string"),
             Lson::Array(_) => formatter.write_str("array"),
             Lson::Struct(_) => formatter.write_str("struct"),
+            Lson::Function(_) => formatter.write_str("function"),
         }
     }
 }

@@ -9,7 +9,7 @@ use std::{fmt::Debug, marker::PhantomData};
 pub struct ParseCommaSeparatedList<'a, P, T>
 where
     P: LibrettoParsable<'a, T> + Sized,
-    T: Logos<'a> + PartialEq + Ordinal + Clone + 'a,
+    T: Logos<'a> + PartialEq + Ordinal + Clone + Debug + 'a,
     T::Extras: Clone,
     Self: Sized,
 {
@@ -20,7 +20,7 @@ where
 impl<'a, P, T> ParseCommaSeparatedList<'a, P, T>
 where
     P: LibrettoParsable<'a, T> + Sized,
-    T: Logos<'a> + PartialEq + Ordinal + Clone + 'a,
+    T: Logos<'a> + PartialEq + Ordinal + Clone + Debug + 'a,
     T::Extras: Clone,
     Self: Sized,
 {
@@ -32,7 +32,7 @@ where
 impl<'a, P, T> Debug for ParseCommaSeparatedList<'a, P, T>
 where
     P: LibrettoParsable<'a, T> + Sized + Debug,
-    T: Logos<'a> + PartialEq + Ordinal + Clone + 'a,
+    T: Logos<'a> + PartialEq + Ordinal + Clone + Debug + 'a,
     T::Extras: Clone,
     Self: Sized,
 {
