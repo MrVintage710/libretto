@@ -10,6 +10,12 @@ pub struct ParseCommaSeparatedList<'a, P, T> where P : LibrettoParsable<'a, T> +
     _phantom : &'a PhantomData<T>
 }
 
+impl <'a, P, T> ParseCommaSeparatedList<'a, P, T> where P : LibrettoParsable<'a, T> + Sized, T: Logos<'a> + PartialEq + Ordinal + Clone + 'a, T::Extras: Clone, Self: Sized {
+    pub fn values(&self) -> &Vec<P> {
+        &self.values
+    }
+}
+
 impl <'a, P, T> Debug for ParseCommaSeparatedList<'a, P, T> where P : LibrettoParsable<'a, T> + Sized + Debug, T: Logos<'a> + PartialEq + Ordinal + Clone + 'a, T::Extras: Clone, Self: Sized{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ParseCommaSeparatedList").field("values", &self.values).finish()

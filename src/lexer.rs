@@ -116,6 +116,15 @@ where
         }
     }
 
+    pub fn pop_and_check_if<D: From<T> + PartialEq + Copy>(&mut self, ordinal_group: impl Into<OrdinalGroup<'a, T, D>>) -> bool {
+        if let Some(token) = self.pop() {
+            let ordinal_group : OrdinalGroup<'a, T, D> = ordinal_group.into();
+            ordinal_group.check_ordinal(&token)
+        } else {
+            false
+        }
+    }
+
     pub fn pop_until<D: From<T> + PartialEq + Copy>(&mut self, ordinal_group: impl Into<OrdinalGroup<'a, T, D>>) -> Vec<T> {
         let mut tokens = Vec::new();
         let ordinal_group : OrdinalGroup<'a, T, D> = ordinal_group.into();
