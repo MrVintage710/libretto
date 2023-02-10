@@ -109,8 +109,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
             LogicOrdinal::StringLiteral,
             LogicOrdinal::BoolLiteral,
             LogicOrdinal::FloatLiteral,
-            LogicOrdinal::IntLiteral,
-            LogicOrdinal::Identifier,
+            LogicOrdinal::IntLiteral
         ]) {
             true
         } else {
@@ -315,10 +314,9 @@ mod tests {
 
     #[test]
     fn parse_logic_value() {
-        let ast = parse_expr::<LogicValue>("ident ");
-        println!("{:?}", ast);
+        let ast = parse_expr::<LogicValue>("ident");
         if let LogicValue::Variable(value) = ast {
-            assert_eq!(value, "test".to_string());
+            assert_eq!(value, "ident".to_string());
         } else {
             assert!(false)
         }
