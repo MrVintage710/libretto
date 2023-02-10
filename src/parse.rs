@@ -1,11 +1,14 @@
-mod logic_let;
 mod logic_expr;
+mod logic_let;
 mod logic_value;
 mod util;
 
-use logos::{Logos};
+use logos::Logos;
+use std::{
+    fmt::{Debug, Display},
+    process::Output,
+};
 use thiserror::Error;
-use std::{process::Output, fmt::{Debug, Display}};
 
 use crate::{
     lexer::{LibrettoTokenQueue, Ordinal},
@@ -18,7 +21,10 @@ pub enum ParseResult<T> {
     Failure,
 }
 
-impl <T> Debug for ParseResult<T> where T : Debug {
+impl<T> Debug for ParseResult<T>
+where
+    T: Debug,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Parsed(arg0) => f.debug_tuple("Parsed").field(arg0).finish(),
@@ -28,7 +34,10 @@ impl <T> Debug for ParseResult<T> where T : Debug {
     }
 }
 
-impl <T> Display for ParseResult<T> where T : Display {
+impl<T> Display for ParseResult<T>
+where
+    T: Display,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Parsed(arg0) => f.debug_tuple("Parsed").finish(),
@@ -56,12 +65,12 @@ where
     T::Extras: Clone,
     Self: Sized,
 {
-    ///This function will check the token queue 
+    ///This function will check the token queue
     fn raw_check(queue: &mut LibrettoTokenQueue<'a, T>) -> bool;
 
     fn parse(queue: &mut LibrettoTokenQueue<'a, T>) -> ParseResult<Self>;
 
-    fn validate(&self, errors : &mut Vec<LibrettoCompileError>);
+    fn validate(&self, errors: &mut Vec<LibrettoCompileError>);
 
     fn check(queue: &mut LibrettoTokenQueue<'a, T>) -> bool {
         if Self::raw_check(queue) {
@@ -80,7 +89,7 @@ where
                 ParseResult::Parsed(value) => Some(value),
                 ParseResult::Error(err) => panic!("Error durring parse: {}", err),
                 ParseResult::Failure => None,
-            }    
+            }
         } else {
             None
         }
@@ -98,7 +107,7 @@ pub type LibrettoCompileResult<T> = Result<T, LibrettoCompileError>;
 #[derive(Error, Debug)]
 pub enum LibrettoCompileError {
     #[error("Values are not allowed to be set to null.")]
-    NullValueError
+    NullValueError,
 }
 
 // #[macro_export]
@@ -120,14 +129,12 @@ pub enum LibrettoCompileError {
 /// If it parses successfully, the value is passed back.
 #[macro_export]
 macro_rules! parse_ast {
-    ($ast:path, $queue:expr) => {
-        {
-            let result = <$ast>::parse($queue);
-            match result {
-                ParseResult::Parsed(value) => value,
-                ParseResult::Error(err) => return ParseResult::Error(err),
-                ParseResult::Failure => return ParseResult::Failure,
-            }
+    ($ast:path, $queue:expr) => {{
+        let result = <$ast>::parse($queue);
+        match result {
+            ParseResult::Parsed(value) => value,
+            ParseResult::Error(err) => return ParseResult::Error(err),
+            ParseResult::Failure => return ParseResult::Failure,
         }
-    };
+    }};
 }

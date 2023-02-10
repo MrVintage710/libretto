@@ -5,9 +5,8 @@ mod runtime;
 
 use std::iter::Peekable;
 
-
-use logos::{Logos, SpannedIter};
 use lexer::{LibrettoLogicToken, LibrettoQuoteToken};
+use logos::{Logos, SpannedIter};
 
 use crate::lexer::LibrettoToken;
 

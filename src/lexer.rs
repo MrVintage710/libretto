@@ -14,7 +14,7 @@ where
     T::Extras: Clone,
 {
     iterator: PeekMoreIterator<Lexer<'a, T>>,
-    cursor : usize
+    cursor: usize,
 }
 
 impl<'a, T> From<Lexer<'a, T>> for LibrettoTokenQueue<'a, T>
@@ -25,7 +25,7 @@ where
     fn from(value: Lexer<'a, T>) -> Self {
         LibrettoTokenQueue {
             iterator: value.peekmore(),
-            cursor : 0
+            cursor: 0,
         }
     }
 }
@@ -79,36 +79,52 @@ where
         self.iterator.clone().count()
     }
 
-    pub fn next_is<D: From<T> + PartialEq + Copy>(&mut self, ordinal_group: impl Into<OrdinalGroup<'a, T, D>>) -> bool {
+    pub fn next_is<D: From<T> + PartialEq + Copy>(
+        &mut self,
+        ordinal_group: impl Into<OrdinalGroup<'a, T, D>>,
+    ) -> bool {
         let next = self.iterator.peek_nth(self.cursor);
         if next.is_none() {
             return false;
         }
         let t = next.unwrap();
-        let ordinal_group : OrdinalGroup<'a, T, D> = ordinal_group.into();
+        let ordinal_group: OrdinalGroup<'a, T, D> = ordinal_group.into();
         let next_is = ordinal_group.check_ordinal(t);
-        if next_is {self.cursor += 1};
+        if next_is {
+            self.cursor += 1
+        };
         next_is
     }
 
-    pub fn next_nth_is<D: From<T> + PartialEq + Copy>(&mut self, ordinal_group: impl Into<OrdinalGroup<'a, T, D>>, n: usize) -> bool {
+    pub fn next_nth_is<D: From<T> + PartialEq + Copy>(
+        &mut self,
+        ordinal_group: impl Into<OrdinalGroup<'a, T, D>>,
+        n: usize,
+    ) -> bool {
         let next = self.iterator.peek_nth(self.cursor + n);
         if next.is_none() {
             return false;
         }
         let t = next.unwrap();
-        let ordinal_group : OrdinalGroup<'a, T, D> = ordinal_group.into();
+        let ordinal_group: OrdinalGroup<'a, T, D> = ordinal_group.into();
         let next_is = ordinal_group.check_ordinal(t);
-        if next_is {self.cursor += 1};
+        if next_is {
+            self.cursor += 1
+        };
         next_is
     }
 
     pub fn pop(&mut self) -> Option<T> {
-        if self.cursor != 0 {self.cursor -= 1};
+        if self.cursor != 0 {
+            self.cursor -= 1
+        };
         self.iterator.next()
     }
 
-    pub fn pop_if_next_is<D: From<T> + PartialEq + Copy>(&mut self, ordinal_group: impl Into<OrdinalGroup<'a, T, D>>) -> Option<T> {
+    pub fn pop_if_next_is<D: From<T> + PartialEq + Copy>(
+        &mut self,
+        ordinal_group: impl Into<OrdinalGroup<'a, T, D>>,
+    ) -> Option<T> {
         if self.next_is(ordinal_group) {
             self.pop()
         } else {
@@ -116,19 +132,25 @@ where
         }
     }
 
-    pub fn pop_and_check_if<D: From<T> + PartialEq + Copy>(&mut self, ordinal_group: impl Into<OrdinalGroup<'a, T, D>>) -> bool {
+    pub fn pop_and_check_if<D: From<T> + PartialEq + Copy>(
+        &mut self,
+        ordinal_group: impl Into<OrdinalGroup<'a, T, D>>,
+    ) -> bool {
         if let Some(token) = self.pop() {
-            let ordinal_group : OrdinalGroup<'a, T, D> = ordinal_group.into();
+            let ordinal_group: OrdinalGroup<'a, T, D> = ordinal_group.into();
             ordinal_group.check_ordinal(&token)
         } else {
             false
         }
     }
 
-    pub fn pop_until<D: From<T> + PartialEq + Copy>(&mut self, ordinal_group: impl Into<OrdinalGroup<'a, T, D>>) -> Vec<T> {
+    pub fn pop_until<D: From<T> + PartialEq + Copy>(
+        &mut self,
+        ordinal_group: impl Into<OrdinalGroup<'a, T, D>>,
+    ) -> Vec<T> {
         let mut tokens = Vec::new();
-        let ordinal_group : OrdinalGroup<'a, T, D> = ordinal_group.into();
-        while(!self.next_is(ordinal_group.clone())) {
+        let ordinal_group: OrdinalGroup<'a, T, D> = ordinal_group.into();
+        while (!self.next_is(ordinal_group.clone())) {
             if let Some(token) = self.pop() {
                 tokens.push(token)
             }
@@ -156,29 +178,57 @@ pub trait Ordinal: Sized + Clone {
 //==================================================================================================
 
 #[derive(Clone)]
-pub struct OrdinalGroup<'a, T, D> where T: Logos<'a> + PartialEq + Clone + Ordinal, T::Extras: Clone,  D: From<T> + PartialEq + Copy {
-    tokens : Vec<D>,
-    _phantom : &'a PhantomData<T>
+pub struct OrdinalGroup<'a, T, D>
+where
+    T: Logos<'a> + PartialEq + Clone + Ordinal,
+    T::Extras: Clone,
+    D: From<T> + PartialEq + Copy,
+{
+    tokens: Vec<D>,
+    _phantom: &'a PhantomData<T>,
 }
 
-impl <'a, D, T, const COUNT : usize> From<[D; COUNT]> for OrdinalGroup<'a, T, D> where T: Logos<'a> + PartialEq + Clone + Ordinal, T::Extras: Clone, D: From<T> + PartialEq + Copy {
+impl<'a, D, T, const COUNT: usize> From<[D; COUNT]> for OrdinalGroup<'a, T, D>
+where
+    T: Logos<'a> + PartialEq + Clone + Ordinal,
+    T::Extras: Clone,
+    D: From<T> + PartialEq + Copy,
+{
     fn from(value: [D; COUNT]) -> Self {
-        OrdinalGroup { tokens: Vec::from(value), _phantom: &PhantomData }
+        OrdinalGroup {
+            tokens: Vec::from(value),
+            _phantom: &PhantomData,
+        }
     }
 }
 
-impl <'a, D, T> From<D> for OrdinalGroup<'a, T, D> where T: Logos<'a> + PartialEq + Clone + Ordinal, T::Extras: Clone, D: From<T> + PartialEq + Copy {
+impl<'a, D, T> From<D> for OrdinalGroup<'a, T, D>
+where
+    T: Logos<'a> + PartialEq + Clone + Ordinal,
+    T::Extras: Clone,
+    D: From<T> + PartialEq + Copy,
+{
     fn from(value: D) -> Self {
         let mut tokens = Vec::new();
         tokens.push(value);
-        OrdinalGroup { tokens, _phantom: &PhantomData }
+        OrdinalGroup {
+            tokens,
+            _phantom: &PhantomData,
+        }
     }
 }
 
-impl <'a, D, T> OrdinalGroup<'a, T, D> where T: Logos<'a> + PartialEq + Clone + Ordinal, T::Extras: Clone, D: From<T> + PartialEq + Copy {
-    fn check_ordinal(&self, token : &T) -> bool {
+impl<'a, D, T> OrdinalGroup<'a, T, D>
+where
+    T: Logos<'a> + PartialEq + Clone + Ordinal,
+    T::Extras: Clone,
+    D: From<T> + PartialEq + Copy,
+{
+    fn check_ordinal(&self, token: &T) -> bool {
         for inner in self.tokens.iter() {
-            if token.check_ordinal(*inner) {return true}
+            if token.check_ordinal(*inner) {
+                return true;
+            }
         }
 
         false
@@ -432,59 +482,61 @@ pub enum LibrettoQuoteToken<'a> {
 
 #[cfg(test)]
 mod tests {
-  use crate::LibrettoQuoteToken;
-  use crate::LibrettoLogicToken;
-  use logos::Logos;
+    use crate::LibrettoLogicToken;
+    use crate::LibrettoQuoteToken;
+    use logos::Logos;
 
-  #[test]
-  fn quote_text_test() {
-    let mut lex = LibrettoQuoteToken::lexer("Go away Brigand!");
-    // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
-    assert_eq!(lex.slice(), "Go away Brigand!");
-    assert_eq!(lex.next(), None);
-  }
+    #[test]
+    fn quote_text_test() {
+        let mut lex = LibrettoQuoteToken::lexer("Go away Brigand!");
+        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
+        assert_eq!(lex.slice(), "Go away Brigand!");
+        assert_eq!(lex.next(), None);
+    }
 
-  #[test]
-  fn quote_tag_test() {
-    let mut lex = LibrettoQuoteToken::lexer("[Welcoming]Hello World![/Welcoming]");
-    // assert_eq!(lex.next(), Some(LibrettoQuoteToken::StartTag("Welcoming".to_string())));
-    // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
-    assert_eq!(lex.slice(), "Hello World!");
-    // assert_eq!(lex.next(), Some(LibrettoQuoteToken::EndTag("Welcoming".to_string())));
-    assert_eq!(lex.next(), None);
-  }
-  
+    #[test]
+    fn quote_tag_test() {
+        let mut lex = LibrettoQuoteToken::lexer("[Welcoming]Hello World![/Welcoming]");
+        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::StartTag("Welcoming".to_string())));
+        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
+        assert_eq!(lex.slice(), "Hello World!");
+        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::EndTag("Welcoming".to_string())));
+        assert_eq!(lex.next(), None);
+    }
 
-  #[test]
-  fn quote_logic_test() {
-    let mut lex = LibrettoQuoteToken::lexer("My logic is: <if status.guild_member == False> end.");
-    // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
-    assert_eq!(lex.slice(), "My logic is: ");
-    // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Logic(vec![
-    //   LibrettoLogicToken::If,
-    //   LibrettoLogicToken::Text("status".to_string()),
-    //   LibrettoLogicToken::Period,
-    //   LibrettoLogicToken::Text("guild_member".to_string()),
-    //   LibrettoLogicToken::Equality,
-    //   LibrettoLogicToken::Text("False".to_string())
-    // ])));
-    // assert_eq!(lex.next(), Some(LibrettoQuoteToken::));
-    assert_eq!(lex.slice(), " end.");
-    assert_eq!(lex.next(), None);
-  }
+    #[test]
+    fn quote_logic_test() {
+        let mut lex =
+            LibrettoQuoteToken::lexer("My logic is: <if status.guild_member == False> end.");
+        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
+        assert_eq!(lex.slice(), "My logic is: ");
+        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Logic(vec![
+        //   LibrettoLogicToken::If,
+        //   LibrettoLogicToken::Text("status".to_string()),
+        //   LibrettoLogicToken::Period,
+        //   LibrettoLogicToken::Text("guild_member".to_string()),
+        //   LibrettoLogicToken::Equality,
+        //   LibrettoLogicToken::Text("False".to_string())
+        // ])));
+        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::));
+        assert_eq!(lex.slice(), " end.");
+        assert_eq!(lex.next(), None);
+    }
 
-  #[test]
-  fn quote_complex_test() {
-    let mut lex = LibrettoQuoteToken::lexer("[yelling]Go away Brigand![/yelling]None named <player.name> are welcome here.");
-    // assert_eq!(lex.next(), Some(LibrettoQuoteToken::StartTag("yelling".to_string())));
-    // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
-    assert_eq!(lex.slice(), "Go away Brigand!");
-    // assert_eq!(lex.next(), Some(LibrettoQuoteToken::EndTag("yelling".to_string())));
-    // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
-    assert_eq!(lex.slice(), "None named ");
-    // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Logic(vec![LibrettoLogicToken::Text("player".to_string()), LibrettoLogicToken::Period, LibrettoLogicToken::Text("name".to_string())])));
-    // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
-    assert_eq!(lex.slice(), " are welcome here.");
-    assert_eq!(lex.next(), None);
-  }
+    #[test]
+    fn quote_complex_test() {
+        let mut lex = LibrettoQuoteToken::lexer(
+            "[yelling]Go away Brigand![/yelling]None named <player.name> are welcome here.",
+        );
+        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::StartTag("yelling".to_string())));
+        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
+        assert_eq!(lex.slice(), "Go away Brigand!");
+        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::EndTag("yelling".to_string())));
+        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
+        assert_eq!(lex.slice(), "None named ");
+        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Logic(vec![LibrettoLogicToken::Text("player".to_string()), LibrettoLogicToken::Period, LibrettoLogicToken::Text("name".to_string())])));
+        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
+        assert_eq!(lex.slice(), " are welcome here.");
+        assert_eq!(lex.next(), None);
+    }
 }
