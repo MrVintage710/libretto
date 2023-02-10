@@ -1,12 +1,13 @@
+use crate::runtime::LibrettoRuntime;
 use core::fmt;
 use std::{
     collections::HashMap,
-    fmt::{Display, Debug},
-    ops::{self}, rc::Rc,
+    fmt::{Debug, Display},
+    ops::{self},
+    rc::Rc,
 };
-use crate::runtime::LibrettoRuntime;
 
-pub type LibrettoFunction = Rc< dyn Fn(Vec<Lson>, &mut LibrettoRuntime) -> Lson >;
+pub type LibrettoFunction = Rc<dyn Fn(Vec<Lson>, &mut LibrettoRuntime) -> Lson>;
 
 #[derive(Clone)]
 pub enum Lson {
@@ -17,7 +18,7 @@ pub enum Lson {
     Bool(bool),
     Array(Vec<Lson>),
     Struct(HashMap<String, Lson>),
-    Function(LibrettoFunction)
+    Function(LibrettoFunction),
 }
 
 impl Lson {

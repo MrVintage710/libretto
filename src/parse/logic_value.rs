@@ -55,8 +55,12 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
         //Check if the next token is one of the following:
         //String Literal, Bool Literal, Float Literal, Int Literal, Identifier
         //If it is, move the queue cursor forward by 1 and return true, else return false
-        if Lson::raw_check(queue) {return true;}
-        if queue.next_is(LogicOrdinal::Identifier) {return true;}
+        if Lson::raw_check(queue) {
+            return true;
+        }
+        if queue.next_is(LogicOrdinal::Identifier) {
+            return true;
+        }
         false
     }
 
@@ -66,11 +70,10 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
             return ParseResult::Parsed(LogicValue::Literal(lson.clone()));
         }
 
-        if let Some(token) = queue.pop_if_next_is(LogicOrdinal::Identifier) {
-            println!("{:?}", token);
-            if let LibrettoLogicToken::Identifier(value) = token {
-                return ParseResult::Parsed(LogicValue::Variable(value.clone()));
-            }
+        if let Some(LibrettoLogicToken::Identifier(value)) =
+            queue.pop_if_next_is(LogicOrdinal::Identifier)
+        {
+            return ParseResult::Parsed(LogicValue::Variable(value.clone()));
         }
 
         ParseResult::Failure
@@ -109,7 +112,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
             LogicOrdinal::StringLiteral,
             LogicOrdinal::BoolLiteral,
             LogicOrdinal::FloatLiteral,
-            LogicOrdinal::IntLiteral
+            LogicOrdinal::IntLiteral,
         ]) {
             true
         } else {
@@ -267,7 +270,6 @@ mod tests {
 
     fn parse_expr<'a, T: LibrettoParsable<'a, LibrettoLogicToken>>(source: &'a str) -> T {
         let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
-        println!("{:?}", queue);
         let result = T::checked_parse(&mut queue);
         assert!(result.is_some());
         result.unwrap()
@@ -309,11 +311,18 @@ mod tests {
     #[test]
     fn check_logic_value() {
         check_expr::<LogicValue>("3", 1);
-        check_expr::<LogicValue>("test", 1);
+        check_expr::<LogicValue>("ident", 1);
     }
 
     #[test]
     fn parse_logic_value() {
+        let ast = parse_expr::<LogicValue>("3");
+        if let LogicValue::Literal(Lson::Int(value)) = ast {
+            assert_eq!(value, 3);
+        } else {
+            assert!(false)
+        }
+
         let ast = parse_expr::<LogicValue>("ident");
         if let LogicValue::Variable(value) = ast {
             assert_eq!(value, "ident".to_string());
