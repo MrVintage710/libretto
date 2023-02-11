@@ -68,7 +68,10 @@ where
     ///This function will check the token queue
     fn raw_check(queue: &mut LibrettoTokenQueue<'a, T>) -> bool;
 
-    fn parse(queue: &mut LibrettoTokenQueue<'a, T>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self>;
+    fn parse(
+        queue: &mut LibrettoTokenQueue<'a, T>,
+        errors: &mut Vec<LibrettoCompileError>,
+    ) -> Option<Self>;
 
     fn validate(&self, errors: &mut Vec<LibrettoCompileError>);
 
@@ -82,7 +85,10 @@ where
         }
     }
 
-    fn checked_parse(queue: &mut LibrettoTokenQueue<'a, T>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
+    fn checked_parse(
+        queue: &mut LibrettoTokenQueue<'a, T>,
+        errors: &mut Vec<LibrettoCompileError>,
+    ) -> Option<Self> {
         queue.reset();
         if Self::check(queue) {
             Self::parse(queue, errors)
@@ -108,13 +114,11 @@ pub enum LibrettoCompileError {
 
 #[macro_export]
 macro_rules! parse_ast {
-    ($type:ty, $queue:expr, $errors:expr) => {
-        {
-            let result = <$type>::parse($queue, $errors);
-            match result {
-                Some(value) => value,
-                None => return None
-            }
+    ($type:ty, $queue:expr, $errors:expr) => {{
+        let result = <$type>::parse($queue, $errors);
+        match result {
+            Some(value) => value,
+            None => return None,
         }
-    };
+    }};
 }

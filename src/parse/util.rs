@@ -1,6 +1,6 @@
 use super::{LibrettoCompileResult, LibrettoParsable, ParseResult};
 use crate::{
-    lexer::{LibrettoLogicToken, LogicOrdinal, Ordinal, LibrettoTokenQueue},
+    lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal},
     parse_ast,
 };
 use logos::Logos;
@@ -62,7 +62,7 @@ where
 
     fn parse(
         queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>,
-        errors: &mut Vec<super::LibrettoCompileError>
+        errors: &mut Vec<super::LibrettoCompileError>,
     ) -> Option<Self> {
         let mut values = Vec::new();
 
@@ -123,7 +123,10 @@ mod tests {
         source: &'a str,
     ) -> ParseCommaSeparatedList<'a, P, LibrettoLogicToken> {
         let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
-        let ast = ParseCommaSeparatedList::<'a, P, LibrettoLogicToken>::checked_parse(&mut queue, &mut Vec::new());
+        let ast = ParseCommaSeparatedList::<'a, P, LibrettoLogicToken>::checked_parse(
+            &mut queue,
+            &mut Vec::new(),
+        );
         assert!(ast.is_some());
         ast.unwrap()
     }

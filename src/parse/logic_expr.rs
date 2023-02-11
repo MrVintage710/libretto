@@ -1,6 +1,4 @@
-use crate::{
-    lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal},
-};
+use crate::lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal};
 
 use super::{logic_value::LogicValue, LibrettoCompileError, LibrettoParsable, ParseResult};
 
@@ -21,7 +19,10 @@ pub struct LogicUnaryExpr {
 }
 
 impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
-    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
+    fn parse(
+        queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>,
+        errors: &mut Vec<LibrettoCompileError>,
+    ) -> Option<Self> {
         //for now
         queue.reset();
         let option_operator = queue.pop_if_next_is([LogicOrdinal::Sub, LogicOrdinal::Bang]);
@@ -40,7 +41,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
                 };
                 Some(LogicUnaryExpr { operator, value })
             }
-            None => None
+            None => None,
         }
     }
 
@@ -71,7 +72,10 @@ pub struct LogicAdditiveExpr {
 }
 
 impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAdditiveExpr {
-    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
+    fn parse(
+        queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>,
+        errors: &mut Vec<LibrettoCompileError>,
+    ) -> Option<Self> {
         //This needs work
 
         // queue.reset();

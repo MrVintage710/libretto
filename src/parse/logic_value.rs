@@ -65,7 +65,10 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
     }
 
     ///Parse a LogicValue Object from a Token Queue
-    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
+    fn parse(
+        queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>,
+        errors: &mut Vec<LibrettoCompileError>,
+    ) -> Option<Self> {
         if let Some(lson) = Lson::checked_parse(queue, errors) {
             return Some(LogicValue::Literal(lson.clone()));
         }
@@ -82,7 +85,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
     fn validate(&self, errors: &mut Vec<LibrettoCompileError>) {
         match self {
             LogicValue::Literal(lson) => lson.validate(errors),
-            LogicValue::Variable(_) => {},
+            LogicValue::Variable(_) => {}
         }
     }
 }
@@ -123,7 +126,10 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
         }
     }
 
-    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
+    fn parse(
+        queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>,
+        errors: &mut Vec<LibrettoCompileError>,
+    ) -> Option<Self> {
         if let Some(token) = queue.pop() {
             if token.check_ordinal(LogicOrdinal::LeftCurlyBracket) {
                 let pairs = parse_ast!(
@@ -153,18 +159,10 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
                 Some(Lson::Array(data))
             } else {
                 match token {
-                    LibrettoLogicToken::StringLiteral(value) => {
-                        Some(Lson::String(value).into())
-                    }
-                    LibrettoLogicToken::BoolLiteral(value) => {
-                        Some(Lson::Bool(value).into())
-                    }
-                    LibrettoLogicToken::FloatLiteral(value) => {
-                        Some(Lson::Float(value).into())
-                    }
-                    LibrettoLogicToken::IntLiteral(value) => {
-                        Some(Lson::Int(value).into())
-                    }
+                    LibrettoLogicToken::StringLiteral(value) => Some(Lson::String(value).into()),
+                    LibrettoLogicToken::BoolLiteral(value) => Some(Lson::Bool(value).into()),
+                    LibrettoLogicToken::FloatLiteral(value) => Some(Lson::Float(value).into()),
+                    LibrettoLogicToken::IntLiteral(value) => Some(Lson::Int(value).into()),
                     _ => None,
                 }
             }
@@ -225,7 +223,10 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicObjectKeyValue {
         true
     }
 
-    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
+    fn parse(
+        queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>,
+        errors: &mut Vec<LibrettoCompileError>,
+    ) -> Option<Self> {
         queue.reset();
         let ident = queue.pop_if_next_is(LogicOrdinal::Identifier).unwrap();
         queue.pop_if_next_is(LogicOrdinal::Colon);
