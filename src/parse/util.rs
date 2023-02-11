@@ -1,6 +1,6 @@
 use super::{LibrettoCompileResult, LibrettoParsable, ParseResult};
 use crate::{
-    lexer::{LibrettoLogicToken, LogicOrdinal, Ordinal},
+    lexer::{LibrettoLogicToken, LogicOrdinal, Ordinal, LibrettoTokenQueue},
     parse_ast,
 };
 use logos::Logos;
@@ -48,7 +48,7 @@ impl<'a, P> LibrettoParsable<'a, LibrettoLogicToken>
 where
     P: LibrettoParsable<'a, LibrettoLogicToken> + Sized,
 {
-    fn raw_check(queue: &mut crate::lexer::LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
+    fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
         if !P::raw_check(queue) {
             return false;
         };
@@ -61,25 +61,26 @@ where
     }
 
     fn parse(
-        queue: &mut crate::lexer::LibrettoTokenQueue<'a, LibrettoLogicToken>,
-    ) -> ParseResult<Self> {
+        queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>,
+        errors: &mut Vec<super::LibrettoCompileError>
+    ) -> Option<Self> {
         let mut values = Vec::new();
 
         queue.reset();
-        values.push(parse_ast!(P, queue));
+        values.push(parse_ast!(P, queue, errors));
         loop {
             if queue.next_is(LogicOrdinal::Comma) && P::raw_check(queue) {
                 queue.pop();
-                values.push(parse_ast!(P, queue))
+                values.push(parse_ast!(P, queue, errors))
             } else {
                 break;
             }
         }
 
         if values.is_empty() {
-            ParseResult::Failure
+            Option::None
         } else {
-            ParseResult::Parsed(Self {
+            Some(Self {
                 values,
                 _phantom: &PhantomData,
             })
@@ -122,7 +123,7 @@ mod tests {
         source: &'a str,
     ) -> ParseCommaSeparatedList<'a, P, LibrettoLogicToken> {
         let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
-        let ast = ParseCommaSeparatedList::<'a, P, LibrettoLogicToken>::checked_parse(&mut queue);
+        let ast = ParseCommaSeparatedList::<'a, P, LibrettoLogicToken>::checked_parse(&mut queue, &mut Vec::new());
         assert!(ast.is_some());
         ast.unwrap()
     }

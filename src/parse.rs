@@ -68,7 +68,7 @@ where
     ///This function will check the token queue
     fn raw_check(queue: &mut LibrettoTokenQueue<'a, T>) -> bool;
 
-    fn parse(queue: &mut LibrettoTokenQueue<'a, T>) -> ParseResult<Self>;
+    fn parse(queue: &mut LibrettoTokenQueue<'a, T>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self>;
 
     fn validate(&self, errors: &mut Vec<LibrettoCompileError>);
 
@@ -82,15 +82,10 @@ where
         }
     }
 
-    fn checked_parse(queue: &mut LibrettoTokenQueue<'a, T>) -> Option<Self> {
+    fn checked_parse(queue: &mut LibrettoTokenQueue<'a, T>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
         queue.reset();
         if Self::check(queue) {
-            let result = Self::parse(queue);
-            match result {
-                ParseResult::Parsed(value) => Some(value),
-                ParseResult::Error(err) => panic!("Error durring parse: {}", err),
-                ParseResult::Failure => None,
-            }
+            Self::parse(queue, errors)
         } else {
             None
         }
@@ -111,31 +106,15 @@ pub enum LibrettoCompileError {
     NullValueError,
 }
 
-// #[macro_export]
-// macro_rules! validate_ast {
-//     ($ast:expr) => {
-//         {
-//             let result = $ast.validate();
-//             match result {
-//                 Err(e) => {return Err(e)},
-//                 _ => {}
-//             };
-//         }
-//     };
-// }
-
-/// This macro will parse a token from the Queue given a type.
-/// If there is a error, it returns the error.
-/// If there is a failure, it resturns the failure.
-/// If it parses successfully, the value is passed back.
 #[macro_export]
 macro_rules! parse_ast {
-    ($ast:path, $queue:expr) => {{
-        let result = <$ast>::parse($queue);
-        match result {
-            ParseResult::Parsed(value) => value,
-            ParseResult::Error(err) => return ParseResult::Error(err),
-            ParseResult::Failure => return ParseResult::Failure,
+    ($type:ty, $queue:expr, $errors:expr) => {
+        {
+            let result = <$type>::parse($queue, $errors);
+            match result {
+                Some(value) => value,
+                None => return None
+            }
         }
-    }};
+    };
 }

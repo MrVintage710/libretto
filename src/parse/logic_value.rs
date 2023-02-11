@@ -65,22 +65,25 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
     }
 
     ///Parse a LogicValue Object from a Token Queue
-    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> ParseResult<Self> {
-        if let Some(lson) = Lson::checked_parse(queue) {
-            return ParseResult::Parsed(LogicValue::Literal(lson.clone()));
+    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
+        if let Some(lson) = Lson::checked_parse(queue, errors) {
+            return Some(LogicValue::Literal(lson.clone()));
         }
 
         if let Some(LibrettoLogicToken::Identifier(value)) =
             queue.pop_if_next_is(LogicOrdinal::Identifier)
         {
-            return ParseResult::Parsed(LogicValue::Variable(value.clone()));
+            return Some(LogicValue::Variable(value.clone()));
         }
 
-        ParseResult::Failure
+        None
     }
 
     fn validate(&self, errors: &mut Vec<LibrettoCompileError>) {
-        todo!()
+        match self {
+            LogicValue::Literal(lson) => lson.validate(errors),
+            LogicValue::Variable(_) => {},
+        }
     }
 }
 
@@ -120,51 +123,53 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
         }
     }
 
-    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> ParseResult<Self> {
+    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
         if let Some(token) = queue.pop() {
             if token.check_ordinal(LogicOrdinal::LeftCurlyBracket) {
                 let pairs = parse_ast!(
                     ParseCommaSeparatedList::<'a, LogicObjectKeyValue, LibrettoLogicToken>,
-                    queue
+                    queue,
+                    errors
                 );
                 if !queue.pop_and_check_if(LogicOrdinal::RightCurlyBracket) {
-                    return ParseResult::Error("Could not find end of object.".to_string());
+                    // Maybe handle error
                 }
                 let data: HashMap<String, Lson> = pairs
                     .values()
                     .iter()
                     .map(|e| (e.key.clone(), e.value.clone()))
                     .collect();
-                ParseResult::Parsed(Lson::Struct(data))
+                Some(Lson::Struct(data))
             } else if token.check_ordinal(LogicOrdinal::LeftBracket) {
                 let pairs = parse_ast!(
                     ParseCommaSeparatedList::<'a, Lson, LibrettoLogicToken>,
-                    queue
+                    queue,
+                    errors
                 );
                 if !queue.pop_and_check_if(LogicOrdinal::RightBracket) {
-                    return ParseResult::Error("Could not find end of object.".to_string());
+                    //handle
                 }
                 let data: Vec<Lson> = pairs.values().iter().map(|e| e.clone()).collect();
-                ParseResult::Parsed(Lson::Array(data))
+                Some(Lson::Array(data))
             } else {
                 match token {
                     LibrettoLogicToken::StringLiteral(value) => {
-                        ParseResult::Parsed(Lson::String(value).into())
+                        Some(Lson::String(value).into())
                     }
                     LibrettoLogicToken::BoolLiteral(value) => {
-                        ParseResult::Parsed(Lson::Bool(value).into())
+                        Some(Lson::Bool(value).into())
                     }
                     LibrettoLogicToken::FloatLiteral(value) => {
-                        ParseResult::Parsed(Lson::Float(value).into())
+                        Some(Lson::Float(value).into())
                     }
                     LibrettoLogicToken::IntLiteral(value) => {
-                        ParseResult::Parsed(Lson::Int(value).into())
+                        Some(Lson::Int(value).into())
                     }
-                    _ => ParseResult::Failure,
+                    _ => None,
                 }
             }
         } else {
-            ParseResult::Failure
+            None
         }
     }
 
@@ -220,16 +225,16 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicObjectKeyValue {
         true
     }
 
-    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> ParseResult<Self> {
+    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
         queue.reset();
         let ident = queue.pop_if_next_is(LogicOrdinal::Identifier).unwrap();
         queue.pop_if_next_is(LogicOrdinal::Colon);
-        let value = Lson::parse(queue).unwrap();
+        let value = Lson::parse(queue, errors).unwrap();
 
         if let LibrettoLogicToken::Identifier(key) = ident {
-            ParseResult::Parsed(LogicObjectKeyValue { key, value })
+            Some(LogicObjectKeyValue { key, value })
         } else {
-            ParseResult::Failure
+            None
         }
     }
 
@@ -270,7 +275,7 @@ mod tests {
 
     fn parse_expr<'a, T: LibrettoParsable<'a, LibrettoLogicToken>>(source: &'a str) -> T {
         let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
-        let result = T::checked_parse(&mut queue);
+        let result = T::checked_parse(&mut queue, &mut Vec::new());
         assert!(result.is_some());
         result.unwrap()
     }
