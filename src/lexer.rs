@@ -481,22 +481,30 @@ fn start_tag<'a>(lex: &mut Lexer<'a, LibrettoQuoteToken<'a>>) -> String {
     content.to_string()
 }
 
+fn quote_text<'a>(lex: &mut Lexer<'a, LibrettoQuoteToken<'a>>) -> String {
+    let content = lex.slice();
+    content.to_string()
+}
+
 impl<'a> Ordinal for LibrettoQuoteToken<'a> {}
 
 #[derive(Debug, Logos, PartialEq, Clone, EnumDiscriminants)]
 #[strum_discriminants(name(QuoteOrdinal))]
 pub enum LibrettoQuoteToken<'a> {
-    #[regex(r"\[[a-zA-Z]*\]", start_tag, priority = 2)]
+    #[regex(r"\[[a-zA-Z]*\]", start_tag, priority = 3)]
     StartTag(String),
 
-    #[regex(r"\[/[a-zA-Z]*\]", end_tag, priority = 1)]
+    #[regex(r"\[/[a-zA-Z]*\]", end_tag, priority = 2)]
     EndTag(String),
 
+    // TODO: put the characters I don't want to match
+    // Don't want to match : < > [ ]
     //select any character and space combination ending with either a period, colon, exclamation mark, or question mark.
-    #[regex(r"[\w\s(.|!|?|:|;)]+", priority = 2)]
-    Text,
+//    #[regex(r"[\w\s(.|!|?|:|;|')]+", quote_text, priority = 2)]
+    #[regex(r"[^\[\]<>]+", quote_text, priority = 1)]
+    Text(String),
 
-    #[regex(r"<([^><]*)>", as_logic_for_quote)]
+    #[regex(r"<([^><]*)>", as_logic_for_quote, priority = 2)]
     Logic(LibrettoTokenQueue<'a, LibrettoLogicToken>),
 
     #[error]

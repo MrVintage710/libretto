@@ -2,6 +2,7 @@ mod logic_expr;
 mod logic_let;
 mod logic_value;
 mod util;
+mod quote;
 
 use logos::Logos;
 use std::{

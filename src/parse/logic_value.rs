@@ -62,6 +62,8 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
             return true;
         }
         false
+
+        //(Lson | Ident)
     }
 
     ///Parse a LogicValue Object from a Token Queue
