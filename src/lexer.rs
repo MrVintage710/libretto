@@ -413,6 +413,9 @@ pub enum LibrettoLogicToken {
     #[token("!")]
     Bang,
 
+    #[token("?")]
+    Question,
+
     #[token(",")]
     Comma,
 

@@ -104,6 +104,9 @@ pub type LibrettoCompileResult<T> = Result<T, LibrettoCompileError>;
 pub enum LibrettoCompileError {
     #[error("Values are not allowed to be set to null.")]
     NullValueError,
+
+    #[error("The operator {0} is not supported for type {1}")]
+    OperationNotSupportedError(String, String),
 }
 
 #[macro_export]
