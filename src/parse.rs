@@ -107,6 +107,9 @@ pub enum LibrettoCompileError {
 
     #[error("The operator {0} is not supported for type {1}")]
     OperationNotSupportedError(String, String),
+
+    #[error("When parsing '{0}', the pre parse check passed event though the pattern doesn't match.")]
+    ParseCheckNotThorough(String)
 }
 
 #[macro_export]

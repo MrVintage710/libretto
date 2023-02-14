@@ -1,3 +1,5 @@
+use std::ops::Add;
+
 use crate::{
     lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal}, parse_ast, logic::lson::Lson,
 };
@@ -89,15 +91,44 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
 //          Additive Expression
 //==================================================================================================
 
+#[derive(Debug, PartialEq)]
+pub enum AdditionOperator {
+    Plus,
+    Minus
+}
+
 #[derive(Debug)]
 pub struct LogicAdditiveExpr {
     lhs: LogicUnaryExpr,
     rhs: Option<LogicUnaryExpr>,
-    is_adding: bool,
+    operator : Option<AdditionOperator>,
 }
 
 impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAdditiveExpr {
     fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
+        
+        let lhs = parse_ast!(LogicUnaryExpr, queue, errors);
+        let operator = {
+            if let Some(op) = queue.pop_if_next_is([LogicOrdinal::Add, LogicOrdinal::Sub]) {
+                match op {
+                    LibrettoLogicToken::Add => Some(AdditionOperator::Plus),
+                    LibrettoLogicToken::Sub => Some(AdditionOperator::Minus),
+                    _ => {
+                        errors.push(LibrettoCompileError::ParseCheckNotThorough("LogicAdditiveExpr".to_string()));
+                        None
+                    }
+                }
+            } else {
+                None
+            }
+        };
+        let rhs = LogicUnaryExpr::checked_parse(queue, errors);
+
+        Some(LogicAdditiveExpr {
+            lhs,
+            rhs,
+            operator,
+        })
         //This needs work
 
         // queue.reset();
@@ -120,18 +151,14 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAdditiveExpr {
         // }
 
         // ParseResult::Failure
-
-        None
     }
 
     fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
-        if !LogicValue::raw_check(queue) {
+        if !LogicUnaryExpr::raw_check(queue) {
             return false;
         };
-        if !queue.next_is([LogicOrdinal::Add, LogicOrdinal::Sub]) {
-            return false;
-        };
-        LogicValue::raw_check(queue);
+        queue.next_is([LogicOrdinal::Add, LogicOrdinal::Sub]);
+        LogicUnaryExpr::raw_check(queue);
         true
     }
 
@@ -146,17 +173,15 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAdditiveExpr {
 
 #[cfg(test)]
 mod tests {
-    use std::fmt::Debug;
-
     use logos::Logos;
 
     use crate::{
         lexer::{LibrettoLogicToken, LibrettoTokenQueue},
         logic::lson::Lson,
-        parse::{self, LibrettoParsable, ParseResult},
+        parse::{self, LibrettoParsable, ParseResult, logic_expr::AdditionOperator},
     };
 
-    use super::{LogicUnaryExpr, LogicValue, UnaryOperator};
+    use super::{LogicUnaryExpr, LogicValue, UnaryOperator, LogicAdditiveExpr};
 
     fn check_expr<'a, T: LibrettoParsable<'a, LibrettoLogicToken>>(
         source: &'a str,
@@ -220,5 +245,25 @@ mod tests {
         validate_expr::<LogicUnaryExpr>("!false", 0);
         validate_expr::<LogicUnaryExpr>("-1", 0);
         validate_expr::<LogicUnaryExpr>("-false", 1);
+    }
+
+    #[test]
+    fn check_additive_expr() {
+        check_expr::<LogicAdditiveExpr>("!false", 2);
+        check_expr::<LogicAdditiveExpr>("-12", 2);
+        check_expr::<LogicAdditiveExpr>("3.14", 1);
+        check_expr::<LogicAdditiveExpr>("2+2", 3);
+    }
+
+    #[test]
+    fn parse_additive_expr() {
+        let ast = parse_expr::<LogicAdditiveExpr>("!false");
+        assert_eq!(ast.operator, None);
+        assert_eq!(ast.lhs, LogicUnaryExpr{ operator: Some(UnaryOperator::Bang), value: LogicValue::Literal(Lson::Bool(false)) });
+
+        let ast = parse_expr::<LogicAdditiveExpr>("2+2");
+        assert_eq!(ast.operator, Some(AdditionOperator::Plus));
+        assert_eq!(ast.lhs, LogicUnaryExpr{ operator: None, value: LogicValue::Literal(Lson::Int(2)) });
+        assert_eq!(ast.rhs, Some(LogicUnaryExpr{ operator: None, value: LogicValue::Literal(Lson::Int(2)) }));
     }
 }
