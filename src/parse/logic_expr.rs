@@ -138,28 +138,6 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAdditiveExpr {
             rhs,
             operator,
         })
-        //This needs work
-
-        // queue.reset();
-        // let lhs = LogicUnaryExpr::parse(queue, errors);
-        // let operator = queue.pop_if_next_is([LogicOrdinal::Add, LogicOrdinal::Sub]);
-        // let rhs = parse_ast!(LogicUnaryExpr, queue);
-
-        // if let Some(operator) = operator {
-        //     let is_adding = match operator {
-        //         LibrettoLogicToken::Add => true,
-        //         LibrettoLogicToken::Sub => false,
-        //         _ => return ParseResult::Error("Not a valid operator".to_owned()),
-        //     };
-
-        //     return ParseResult::Parsed(LogicAdditiveExpr {
-        //         lhs,
-        //         rhs: Some(rhs),
-        //         is_adding,
-        //     });
-        // }
-
-        // ParseResult::Failure
     }
 
     fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
