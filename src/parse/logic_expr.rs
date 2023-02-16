@@ -290,6 +290,11 @@ mod tests {
         assert_eq!(ast.operator, Some(AdditionOperator::Plus));
         assert_eq!(ast.lhs, LogicUnaryExpr{ operator: None, value: LogicValue::Literal(Lson::Int(2)) });
         assert_eq!(ast.rhs, Some(LogicUnaryExpr{ operator: None, value: LogicValue::Literal(Lson::Int(2)) }));
+
+        let ast = parse_expr::<LogicAdditiveExpr>("2-2");
+        assert_eq!(ast.operator, Some(AdditionOperator::Minus));
+        assert_eq!(ast.lhs, LogicUnaryExpr{ operator: None, value: LogicValue::Literal(Lson::Int(2)) });
+        assert_eq!(ast.rhs, Some(LogicUnaryExpr{ operator: None, value: LogicValue::Literal(Lson::Int(2)) }));
     }
 
     #[test]
