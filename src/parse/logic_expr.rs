@@ -1,7 +1,7 @@
 use std::ops::Add;
 
 use crate::{
-    lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal}, parse_ast, logic::lson::Lson,
+    lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal}, parse_ast, logic::lson::{Lson, LsonType},
 };
 
 use super::{logic_value::LogicValue, LibrettoCompileError, LibrettoParsable, ParseResult};
@@ -97,6 +97,15 @@ pub enum AdditionOperator {
     Minus
 }
 
+impl ToString for AdditionOperator {
+    fn to_string(&self) -> String {
+        match self {
+            AdditionOperator::Plus => String::from("+"),
+            AdditionOperator::Minus => String::from("-"),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct LogicAdditiveExpr {
     lhs: LogicUnaryExpr,
@@ -114,7 +123,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAdditiveExpr {
                     LibrettoLogicToken::Add => Some(AdditionOperator::Plus),
                     LibrettoLogicToken::Sub => Some(AdditionOperator::Minus),
                     _ => {
-                        errors.push(LibrettoCompileError::ParseCheckNotThorough("LogicAdditiveExpr".to_string()));
+                        errors.push(LibrettoCompileError::ParseCheckNotThoroughError("LogicAdditiveExpr".to_string()));
                         None
                     }
                 }
@@ -163,7 +172,23 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAdditiveExpr {
     }
 
     fn validate(&self, errors: &mut Vec<LibrettoCompileError>) {
-        todo!()
+        if let (Some(op), Some(rhs)) = (&self.operator, &self.rhs) {
+            if let (LogicValue::Literal(lhs_value), LogicValue::Literal(rhs_value)) = (&self.lhs.value, &rhs.value){
+                let lhs_type : LsonType = lhs_value.into();
+                let rhs_type : LsonType = rhs_value.into();
+                match (lhs_type, rhs_type) {
+                    (LsonType::Float, LsonType::Float) |
+                    (LsonType::Int, LsonType::Int) |
+                    (LsonType::Int, LsonType::Float) |
+                    (LsonType::Float, LsonType::Int) |
+                    (LsonType::String, LsonType::Float) |
+                    (LsonType::String, LsonType::Int)|
+                    (LsonType::Float, LsonType::String) |
+                    (LsonType::Int, LsonType::String) => {},
+                    _ => errors.push(LibrettoCompileError::InvalidOperationError(op.to_string(), lhs_type.to_string(), rhs_type.to_string()))
+                }
+            }
+        }
     }
 }
 
@@ -265,5 +290,12 @@ mod tests {
         assert_eq!(ast.operator, Some(AdditionOperator::Plus));
         assert_eq!(ast.lhs, LogicUnaryExpr{ operator: None, value: LogicValue::Literal(Lson::Int(2)) });
         assert_eq!(ast.rhs, Some(LogicUnaryExpr{ operator: None, value: LogicValue::Literal(Lson::Int(2)) }));
+    }
+
+    #[test]
+    fn validate_additive_expr() {
+        validate_expr::<LogicAdditiveExpr>("!false", 0);
+        validate_expr::<LogicAdditiveExpr>("2 + 2", 0);
+        validate_expr::<LogicAdditiveExpr>("false + 3", 1);
     }
 }

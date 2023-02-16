@@ -1,3 +1,5 @@
+use strum::EnumDiscriminants;
+
 use crate::runtime::LibrettoRuntime;
 use core::fmt;
 use std::{
@@ -9,7 +11,8 @@ use std::{
 
 pub type LibrettoFunction = Rc<dyn Fn(Vec<Lson>, &mut LibrettoRuntime) -> Lson>;
 
-#[derive(Clone)]
+#[derive(Clone, EnumDiscriminants)]
+#[strum_discriminants(name(LsonType))]
 pub enum Lson {
     None,
     Int(i64),
@@ -107,6 +110,34 @@ impl Lson {
             Some(value.as_str())
         } else {
             None
+        }
+    }
+
+    pub fn matches_type(&self, t : LsonType) -> bool {
+        match self {
+            Lson::None => LsonType::None == t,
+            Lson::Int(_) => LsonType::Int == t,
+            Lson::Float(_) => LsonType::Float == t,
+            Lson::String(_) => LsonType::String == t,
+            Lson::Bool(_) => LsonType::Bool == t,
+            Lson::Array(_) => LsonType::Array == t,
+            Lson::Struct(_) => LsonType::Struct == t,
+            Lson::Function(_) => LsonType::Function == t,
+        }
+    }
+}
+
+impl ToString for LsonType {
+    fn to_string(&self) -> String {
+        match self {
+            LsonType::None => String::from("none"),
+            LsonType::Int => String::from("int"),
+            LsonType::Float => String::from("float"),
+            LsonType::String => String::from("string"),
+            LsonType::Bool => String::from("bool"),
+            LsonType::Array => String::from("array"),
+            LsonType::Struct => String::from("struct"),
+            LsonType::Function => String::from("function"),
         }
     }
 }

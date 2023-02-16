@@ -87,6 +87,22 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
     }
 }
 
+impl LogicValue {
+    pub fn is_literal(&self) -> bool {
+        match self {
+            LogicValue::Literal(_) => true,
+            LogicValue::Variable(_) => false,
+        }
+    }
+
+    pub fn get_value(&self) -> Option<&Lson> {
+        match self {
+            LogicValue::Literal(value) => Some(value),
+            LogicValue::Variable(_) => None,
+        }
+    }
+}
+
 //==================================================================================================
 //          Lson Parsable
 //==================================================================================================
