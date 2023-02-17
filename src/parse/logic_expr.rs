@@ -171,6 +171,42 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAdditiveExpr {
 }
 
 //==================================================================================================
+//          Multiplicative Expression
+//==================================================================================================
+
+#[derive(Debug, PartialEq)]
+pub enum MultiplicativeOperator {
+    Mult,
+    Div
+}
+
+#[derive(Debug)]
+pub struct LogicMultiplicativeExpr {
+    lhs : LogicAdditiveExpr,
+    operator : Option<MultiplicativeOperator>,
+    rhs: Option<LogicAdditiveExpr>
+}
+
+impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicMultiplicativeExpr {
+    fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
+        if !LogicAdditiveExpr::raw_check(queue) {
+            return false;
+        };
+        queue.next_is([LogicOrdinal::Mult, LogicOrdinal::Div]);
+        LogicUnaryExpr::raw_check(queue);
+        true
+    }
+
+    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
+        todo!()
+    }
+
+    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) {
+        todo!()
+    }
+}
+
+//==================================================================================================
 //          Tests
 //==================================================================================================
 
@@ -184,7 +220,7 @@ mod tests {
         parse::{self, LibrettoParsable, ParseResult, logic_expr::AdditionOperator},
     };
 
-    use super::{LogicUnaryExpr, LogicValue, UnaryOperator, LogicAdditiveExpr};
+    use super::{LogicUnaryExpr, LogicValue, UnaryOperator, LogicAdditiveExpr, LogicMultiplicativeExpr};
 
     fn check_expr<'a, T: LibrettoParsable<'a, LibrettoLogicToken>>(
         source: &'a str,
@@ -280,5 +316,14 @@ mod tests {
         validate_expr::<LogicAdditiveExpr>("!false", 0);
         validate_expr::<LogicAdditiveExpr>("2 + 2", 0);
         validate_expr::<LogicAdditiveExpr>("false + 3", 1);
+    }
+
+    #[test]
+    fn check_multiplicative_expr() {
+        check_expr::<LogicMultiplicativeExpr>("!false", 2);
+        check_expr::<LogicMultiplicativeExpr>("-12", 2);
+        check_expr::<LogicMultiplicativeExpr>("3.14", 1);
+        check_expr::<LogicMultiplicativeExpr>("2+2", 3);
+        check_expr::<LogicMultiplicativeExpr>("2+2*4", 5);
     }
 }
