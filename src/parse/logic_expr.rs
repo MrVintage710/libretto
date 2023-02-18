@@ -108,70 +108,69 @@ impl ToString for TermOperator {
 
 #[derive(Debug)]
 pub struct LogicTermExpr {
-    lhs: LogicUnaryExpr,
-    operator : Option<TermOperator>,
-    rhs: Option<LogicUnaryExpr>,
+    lhs: LogicFactorExpr,
+    rhs: Vec<(TermOperator, LogicFactorExpr)>,
 }
 
 impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicTermExpr {
     fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
-        
-        let lhs = parse_ast!(LogicUnaryExpr, queue, errors);
-        let operator = {
-            if let Some(op) = queue.pop_if_next_is([LogicOrdinal::Add, LogicOrdinal::Sub]) {
-                match op {
-                    LibrettoLogicToken::Add => Some(TermOperator::Plus),
-                    LibrettoLogicToken::Sub => Some(TermOperator::Minus),
-                    _ => {
-                        errors.push(LibrettoCompileError::ParseCheckNotThoroughError("LogicAdditiveExpr".to_string()));
-                        None
+        let lhs = parse_ast!(LogicFactorExpr, queue, errors);
+        let mut rhs = Vec::new();
+
+        loop {
+            queue.reset();
+            if queue.next_is([LogicOrdinal::Add, LogicOrdinal::Sub]) && LogicFactorExpr::raw_check(queue) {
+                let operator = {
+                    let token = queue.pop();
+                    if let Some(LibrettoLogicToken::Sub) = token {
+                        TermOperator::Minus
+                    } else {
+                        TermOperator::Plus
                     }
+                };
+                let value = LogicFactorExpr::parse(queue, errors);
+                if value.is_some() {
+                    rhs.push((operator, value.unwrap()));
                 }
             } else {
-                None
+                break;
             }
-        };
-        let rhs = LogicUnaryExpr::checked_parse(queue, errors);
+        }
 
-        Some(LogicTermExpr {
-            lhs,
-            rhs,
-            operator,
-        })
+        Some(LogicTermExpr { lhs, rhs })
     }
 
     fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
-        if !LogicUnaryExpr::raw_check(queue) {
+        if !LogicFactorExpr::raw_check(queue) {
             return false;
         };
-        queue.next_is([LogicOrdinal::Add, LogicOrdinal::Sub]);
-        LogicUnaryExpr::raw_check(queue);
+        while queue.next_is([LogicOrdinal::Add, LogicOrdinal::Sub]) && LogicFactorExpr::raw_check(queue) {}
         true
     }
 
     fn validate(&self, errors: &mut Vec<LibrettoCompileError>) {
-        if let (Some(op), Some(rhs)) = (&self.operator, &self.rhs) {
-            if let (LogicValue::Literal(lhs_value), LogicValue::Literal(rhs_value)) = (&self.lhs.value, &rhs.value){
-                let lhs_type : LsonType = lhs_value.into();
-                let rhs_type : LsonType = rhs_value.into();
-                match (lhs_type, rhs_type) {
-                    (LsonType::Float, LsonType::Float) |
-                    (LsonType::Int, LsonType::Int) |
-                    (LsonType::Int, LsonType::Float) |
-                    (LsonType::Float, LsonType::Int) |
-                    (LsonType::String, LsonType::Float) |
-                    (LsonType::String, LsonType::Int)|
-                    (LsonType::Float, LsonType::String) |
-                    (LsonType::Int, LsonType::String) => {},
-                    _ => errors.push(LibrettoCompileError::InvalidOperationError(op.to_string(), lhs_type.to_string(), rhs_type.to_string()))
-                }
-            }
-        }
+        // if let (Some(op), Some(rhs)) = (&self.operator, &self.rhs) {
+        //     if let (LogicValue::Literal(lhs_value), LogicValue::Literal(rhs_value)) = (&self.lhs.value, &rhs.value){
+        //         let lhs_type : LsonType = lhs_value.into();
+        //         let rhs_type : LsonType = rhs_value.into();
+        //         match (lhs_type, rhs_type) {
+        //             (LsonType::Float, LsonType::Float) |
+        //             (LsonType::Int, LsonType::Int) |
+        //             (LsonType::Int, LsonType::Float) |
+        //             (LsonType::Float, LsonType::Int) |
+        //             (LsonType::String, LsonType::Float) |
+        //             (LsonType::String, LsonType::Int)|
+        //             (LsonType::Float, LsonType::String) |
+        //             (LsonType::Int, LsonType::String) => {},
+        //             _ => errors.push(LibrettoCompileError::InvalidOperationError(op.to_string(), lhs_type.to_string(), rhs_type.to_string()))
+        //         }
+        //     }
+        // }
     }
 }
 
 //==================================================================================================
-//          Multiplicative Expression
+//          Factor Expression
 //==================================================================================================
 
 #[derive(Debug, PartialEq)]
@@ -180,7 +179,7 @@ pub enum FactorOperator {
     Div
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct LogicFactorExpr {
     lhs : LogicUnaryExpr,
     rhs : Vec<(FactorOperator, LogicUnaryExpr)>
@@ -308,28 +307,17 @@ mod tests {
     }
 
     #[test]
-    fn check_additive_expr() {
+    fn check_term_expr() {
         check_expr::<LogicTermExpr>("!false", 2);
         check_expr::<LogicTermExpr>("-12", 2);
         check_expr::<LogicTermExpr>("3.14", 1);
-        check_expr::<LogicTermExpr>("2+2", 3);
+        check_expr::<LogicTermExpr>("2+2+2+4*8", 9);
     }
 
     #[test]
-    fn parse_additive_expr() {
-        let ast = parse_expr::<LogicTermExpr>("!false");
-        assert_eq!(ast.operator, None);
-        assert_eq!(ast.lhs, LogicUnaryExpr{ operator: Some(UnaryOperator::Bang), value: LogicValue::Literal(Lson::Bool(false)) });
-
-        let ast = parse_expr::<LogicTermExpr>("2+2");
-        assert_eq!(ast.operator, Some(TermOperator::Plus));
-        assert_eq!(ast.lhs, LogicUnaryExpr{ operator: None, value: LogicValue::Literal(Lson::Int(2)) });
-        assert_eq!(ast.rhs, Some(LogicUnaryExpr{ operator: None, value: LogicValue::Literal(Lson::Int(2)) }));
-
-        let ast = parse_expr::<LogicTermExpr>("2-2");
-        assert_eq!(ast.operator, Some(TermOperator::Minus));
-        assert_eq!(ast.lhs, LogicUnaryExpr{ operator: None, value: LogicValue::Literal(Lson::Int(2)) });
-        assert_eq!(ast.rhs, Some(LogicUnaryExpr{ operator: None, value: LogicValue::Literal(Lson::Int(2)) }));
+    fn parse_term_expr() {
+        let ast = parse_expr::<LogicTermExpr>("2+3");
+        assert_eq!(ast.lhs, parse_expr::<LogicFactorExpr>("2"));
     }
 
     #[test]
