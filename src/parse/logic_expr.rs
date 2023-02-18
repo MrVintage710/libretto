@@ -92,36 +92,36 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
 //==================================================================================================
 
 #[derive(Debug, PartialEq)]
-pub enum AdditionOperator {
+pub enum TermOperator {
     Plus,
     Minus
 }
 
-impl ToString for AdditionOperator {
+impl ToString for TermOperator {
     fn to_string(&self) -> String {
         match self {
-            AdditionOperator::Plus => String::from("+"),
-            AdditionOperator::Minus => String::from("-"),
+            TermOperator::Plus => String::from("+"),
+            TermOperator::Minus => String::from("-"),
         }
     }
 }
 
 #[derive(Debug)]
-pub struct LogicAdditiveExpr {
+pub struct LogicTermExpr {
     lhs: LogicUnaryExpr,
+    operator : Option<TermOperator>,
     rhs: Option<LogicUnaryExpr>,
-    operator : Option<AdditionOperator>,
 }
 
-impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAdditiveExpr {
+impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicTermExpr {
     fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
         
         let lhs = parse_ast!(LogicUnaryExpr, queue, errors);
         let operator = {
             if let Some(op) = queue.pop_if_next_is([LogicOrdinal::Add, LogicOrdinal::Sub]) {
                 match op {
-                    LibrettoLogicToken::Add => Some(AdditionOperator::Plus),
-                    LibrettoLogicToken::Sub => Some(AdditionOperator::Minus),
+                    LibrettoLogicToken::Add => Some(TermOperator::Plus),
+                    LibrettoLogicToken::Sub => Some(TermOperator::Minus),
                     _ => {
                         errors.push(LibrettoCompileError::ParseCheckNotThoroughError("LogicAdditiveExpr".to_string()));
                         None
@@ -133,7 +133,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAdditiveExpr {
         };
         let rhs = LogicUnaryExpr::checked_parse(queue, errors);
 
-        Some(LogicAdditiveExpr {
+        Some(LogicTermExpr {
             lhs,
             rhs,
             operator,
@@ -175,30 +175,51 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAdditiveExpr {
 //==================================================================================================
 
 #[derive(Debug, PartialEq)]
-pub enum MultiplicativeOperator {
+pub enum FactorOperator {
     Mult,
     Div
 }
 
 #[derive(Debug)]
-pub struct LogicMultiplicativeExpr {
-    lhs : LogicAdditiveExpr,
-    operator : Option<MultiplicativeOperator>,
-    rhs: Option<LogicAdditiveExpr>
+pub struct LogicFactorExpr {
+    lhs : LogicUnaryExpr,
+    rhs : Vec<(FactorOperator, LogicUnaryExpr)>
 }
 
-impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicMultiplicativeExpr {
+impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicFactorExpr {
     fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
-        if !LogicAdditiveExpr::raw_check(queue) {
+        if !LogicUnaryExpr::raw_check(queue) {
             return false;
         };
-        queue.next_is([LogicOrdinal::Mult, LogicOrdinal::Div]);
-        LogicUnaryExpr::raw_check(queue);
+        while queue.next_is([LogicOrdinal::Mult, LogicOrdinal::Div]) && LogicUnaryExpr::raw_check(queue) {}
         true
     }
 
     fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
-        todo!()
+        let lhs = parse_ast!(LogicUnaryExpr, queue, errors);
+        let mut rhs = Vec::new();
+
+        loop {
+            queue.reset();
+            if queue.next_is([LogicOrdinal::Mult, LogicOrdinal::Div]) && LogicUnaryExpr::raw_check(queue) {
+                let operator = {
+                    let token = queue.pop();
+                    if let Some(LibrettoLogicToken::Div) = token {
+                        FactorOperator::Div
+                    } else {
+                        FactorOperator::Mult
+                    }
+                };
+                let value = LogicUnaryExpr::parse(queue, errors);
+                if value.is_some() {
+                    rhs.push((operator, value.unwrap()));
+                }
+            } else {
+                break;
+            }
+        }
+
+        Some(LogicFactorExpr { lhs, rhs })
     }
 
     fn validate(&self, errors: &mut Vec<LibrettoCompileError>) {
@@ -217,10 +238,10 @@ mod tests {
     use crate::{
         lexer::{LibrettoLogicToken, LibrettoTokenQueue},
         logic::lson::Lson,
-        parse::{self, LibrettoParsable, ParseResult, logic_expr::AdditionOperator},
+        parse::{self, LibrettoParsable, ParseResult, logic_expr::{TermOperator, FactorOperator}},
     };
 
-    use super::{LogicUnaryExpr, LogicValue, UnaryOperator, LogicAdditiveExpr, LogicMultiplicativeExpr};
+    use super::{LogicUnaryExpr, LogicValue, UnaryOperator, LogicTermExpr, LogicFactorExpr};
 
     fn check_expr<'a, T: LibrettoParsable<'a, LibrettoLogicToken>>(
         source: &'a str,
@@ -288,42 +309,49 @@ mod tests {
 
     #[test]
     fn check_additive_expr() {
-        check_expr::<LogicAdditiveExpr>("!false", 2);
-        check_expr::<LogicAdditiveExpr>("-12", 2);
-        check_expr::<LogicAdditiveExpr>("3.14", 1);
-        check_expr::<LogicAdditiveExpr>("2+2", 3);
+        check_expr::<LogicTermExpr>("!false", 2);
+        check_expr::<LogicTermExpr>("-12", 2);
+        check_expr::<LogicTermExpr>("3.14", 1);
+        check_expr::<LogicTermExpr>("2+2", 3);
     }
 
     #[test]
     fn parse_additive_expr() {
-        let ast = parse_expr::<LogicAdditiveExpr>("!false");
+        let ast = parse_expr::<LogicTermExpr>("!false");
         assert_eq!(ast.operator, None);
         assert_eq!(ast.lhs, LogicUnaryExpr{ operator: Some(UnaryOperator::Bang), value: LogicValue::Literal(Lson::Bool(false)) });
 
-        let ast = parse_expr::<LogicAdditiveExpr>("2+2");
-        assert_eq!(ast.operator, Some(AdditionOperator::Plus));
+        let ast = parse_expr::<LogicTermExpr>("2+2");
+        assert_eq!(ast.operator, Some(TermOperator::Plus));
         assert_eq!(ast.lhs, LogicUnaryExpr{ operator: None, value: LogicValue::Literal(Lson::Int(2)) });
         assert_eq!(ast.rhs, Some(LogicUnaryExpr{ operator: None, value: LogicValue::Literal(Lson::Int(2)) }));
 
-        let ast = parse_expr::<LogicAdditiveExpr>("2-2");
-        assert_eq!(ast.operator, Some(AdditionOperator::Minus));
+        let ast = parse_expr::<LogicTermExpr>("2-2");
+        assert_eq!(ast.operator, Some(TermOperator::Minus));
         assert_eq!(ast.lhs, LogicUnaryExpr{ operator: None, value: LogicValue::Literal(Lson::Int(2)) });
         assert_eq!(ast.rhs, Some(LogicUnaryExpr{ operator: None, value: LogicValue::Literal(Lson::Int(2)) }));
     }
 
     #[test]
     fn validate_additive_expr() {
-        validate_expr::<LogicAdditiveExpr>("!false", 0);
-        validate_expr::<LogicAdditiveExpr>("2 + 2", 0);
-        validate_expr::<LogicAdditiveExpr>("false + 3", 1);
+        validate_expr::<LogicTermExpr>("!false", 0);
+        validate_expr::<LogicTermExpr>("2 + 2", 0);
+        validate_expr::<LogicTermExpr>("false + 3", 1);
     }
 
     #[test]
-    fn check_multiplicative_expr() {
-        check_expr::<LogicMultiplicativeExpr>("!false", 2);
-        check_expr::<LogicMultiplicativeExpr>("-12", 2);
-        check_expr::<LogicMultiplicativeExpr>("3.14", 1);
-        check_expr::<LogicMultiplicativeExpr>("2+2", 3);
-        check_expr::<LogicMultiplicativeExpr>("2+2*4", 5);
+    fn check_factor_expr() {
+        check_expr::<LogicFactorExpr>("!false", 2);
+        check_expr::<LogicFactorExpr>("-12", 2);
+        check_expr::<LogicFactorExpr>("3.14", 1);
+        check_expr::<LogicFactorExpr>("2", 1);
+        check_expr::<LogicFactorExpr>("2*4*6*8", 7);
+    }
+
+    #[test]
+    fn parse_factor_expr() {
+        let ast = parse_expr::<LogicFactorExpr>("2*4*6");
+        assert_eq!(ast.lhs, parse_expr::<LogicUnaryExpr>("2"));
+        assert_eq!(ast.rhs, vec![(FactorOperator::Mult, parse_expr::<LogicUnaryExpr>("4")), (FactorOperator::Mult, parse_expr::<LogicUnaryExpr>("6"))]);
     }
 }
