@@ -149,6 +149,10 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicTermExpr {
     }
 
     fn validate(&self, errors: &mut Vec<LibrettoCompileError>) {
+        self.lhs.validate(errors);
+        if !self.rhs.is_empty() {
+            
+        }
         // if let (Some(op), Some(rhs)) = (&self.operator, &self.rhs) {
         //     if let (LogicValue::Literal(lhs_value), LogicValue::Literal(rhs_value)) = (&self.lhs.value, &rhs.value){
         //         let lhs_type : LsonType = lhs_value.into();
@@ -225,6 +229,7 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicFactorExpr {
         todo!()
     }
 }
+    
 
 //==================================================================================================
 //          Tests
@@ -318,6 +323,7 @@ mod tests {
     fn parse_term_expr() {
         let ast = parse_expr::<LogicTermExpr>("2+3");
         assert_eq!(ast.lhs, parse_expr::<LogicFactorExpr>("2"));
+        assert_eq!(ast.rhs[0], (TermOperator::Plus, parse_expr::<LogicFactorExpr>("3")));
     }
 
     #[test]

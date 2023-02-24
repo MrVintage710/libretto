@@ -11,6 +11,7 @@ use std::{
 use thiserror::Error;
 
 use crate::{
+    logic::lson::{LsonType},
     lexer::{LibrettoTokenQueue, Ordinal},
     runtime::LibrettoRuntime,
 };
@@ -127,4 +128,8 @@ macro_rules! parse_ast {
             }
         }
     };
+}
+
+pub trait CompileTimeTyped {
+    fn get_compile_time_type(&self) -> Option<LsonType>;
 }

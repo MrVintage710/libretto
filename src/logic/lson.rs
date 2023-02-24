@@ -142,6 +142,16 @@ impl ToString for LsonType {
     }
 }
 
+impl LsonType {
+    pub fn adds_with(&self, lson_type : LsonType) -> bool {
+        match (self, lson_type) {
+            (LsonType::Float, LsonType::Float) | 
+            (LsonType::Int, LsonType::Int) => true,
+            _ => false
+        }
+    }
+}
+
 impl From<i64> for Lson {
     fn from(value: i64) -> Self {
         Lson::Int(value)
