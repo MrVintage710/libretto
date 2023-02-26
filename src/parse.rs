@@ -130,6 +130,6 @@ macro_rules! parse_ast {
     };
 }
 
-pub trait CompileTimeTyped {
-    fn get_compile_time_type(&self) -> Option<LsonType>;
+pub trait StaticTyped {
+    fn get_static_type(&self) -> Option<LsonType>;
 }

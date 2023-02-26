@@ -143,11 +143,45 @@ impl ToString for LsonType {
 }
 
 impl LsonType {
-    pub fn adds_with(&self, lson_type : LsonType) -> bool {
-        match (self, lson_type) {
+    pub fn get_sum_type(&self, other : LsonType) -> Option<LsonType> {
+        match (self, other) {
             (LsonType::Float, LsonType::Float) | 
-            (LsonType::Int, LsonType::Int) => true,
-            _ => false
+            (LsonType::Float, LsonType::Int) |
+            (LsonType::Int, LsonType::Float) => Some(LsonType::Float),
+            (_, LsonType::String) |
+            (LsonType::String, _) => Some(LsonType::String),
+            (LsonType::Int, LsonType::Int) => Some(LsonType::Int),
+            _ => None
+        }
+    }
+
+    pub fn get_difference_type(&self, other : LsonType) -> Option<LsonType> {
+        match (self, other) {
+            (LsonType::Float, LsonType::Float) | 
+            (LsonType::Float, LsonType::Int) |
+            (LsonType::Int, LsonType::Float) => Some(LsonType::Float),
+            (LsonType::Int, LsonType::Int) => Some(LsonType::Int),
+            _ => None
+        }
+    }
+
+    pub fn get_product_type(&self, other : LsonType) -> Option<LsonType> {
+        match (self, other) {
+            (LsonType::Float, LsonType::Float) | 
+            (LsonType::Float, LsonType::Int) |
+            (LsonType::Int, LsonType::Float) => Some(LsonType::Float),
+            (LsonType::Int, LsonType::Int) => Some(LsonType::Int),
+            _ => None
+        }
+    }
+
+    pub fn get_quotient_type(&self, other : LsonType) -> Option<LsonType> {
+        match (self, other) {
+            (LsonType::Float, LsonType::Float) | 
+            (LsonType::Float, LsonType::Int) |
+            (LsonType::Int, LsonType::Float) => Some(LsonType::Float),
+            (LsonType::Int, LsonType::Int) => Some(LsonType::Int),
+            _ => None
         }
     }
 }

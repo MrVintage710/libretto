@@ -4,7 +4,7 @@ use crate::{
     lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal}, parse_ast, logic::lson::{Lson, LsonType},
 };
 
-use super::{logic_value::LogicValue, LibrettoCompileError, LibrettoParsable, ParseResult};
+use super::{logic_value::LogicValue, LibrettoCompileError, LibrettoParsable, ParseResult, StaticTyped};
 
 //==================================================================================================
 //          Logic Unary Expression
@@ -87,6 +87,12 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
     }
 }
 
+impl StaticTyped for LogicUnaryExpr {
+    fn get_static_type(&self) -> Option<LsonType> {
+        self.value.get_static_type()
+    }
+}
+
 //==================================================================================================
 //          Additive Expression
 //==================================================================================================
@@ -151,7 +157,15 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicTermExpr {
     fn validate(&self, errors: &mut Vec<LibrettoCompileError>) {
         self.lhs.validate(errors);
         if !self.rhs.is_empty() {
-            
+            for i in 0..self.rhs.len()-1 {
+                let lhs = if i == 0 {
+                    
+                } else {
+
+                };
+
+                let (op, rhs) = &self.rhs[i+1];
+            }
         }
         // if let (Some(op), Some(rhs)) = (&self.operator, &self.rhs) {
         //     if let (LogicValue::Literal(lhs_value), LogicValue::Literal(rhs_value)) = (&self.lhs.value, &rhs.value){
@@ -227,6 +241,43 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicFactorExpr {
 
     fn validate(&self, errors: &mut Vec<LibrettoCompileError>) {
         todo!()
+    }
+}
+
+impl StaticTyped for LogicFactorExpr {
+    fn get_static_type(&self) -> Option<LsonType> {
+        let lhs_type = self.lhs.get_static_type();
+        if lhs_type.is_none() {return None}
+
+        let mut types = Vec::new();
+        let mut ops = Vec::new();
+        types.push(lhs_type.unwrap());
+
+        for (op, factor) in &self.rhs {
+            let rhs_type = factor.get_static_type();
+            if rhs_type.is_none() {return None}
+            ops.push(op);
+            types.push(lhs_type.unwrap());
+        };
+
+        let expected_type = LsonType::None;
+
+        for i in 0..ops.len() {
+            let t1 = types[i];
+            let t2 = types[i+1];
+            let op = ops[i];
+
+            let product_type = match op {
+                FactorOperator::Mult => t1.get_product_type(t2),
+                FactorOperator::Div => t1.get_quotient_type(t2)
+            };
+
+            if product_typeDim
+
+            if expected_type == LsonType::None {
+                Fac
+            }
+        };
     }
 }
     

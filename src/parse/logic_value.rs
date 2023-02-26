@@ -2,7 +2,7 @@ use std::collections::{btree_map::Values, HashMap};
 
 use super::{
     util::ParseCommaSeparatedList, LibrettoCompileError, LibrettoCompileResult, LibrettoParsable,
-    ParseResult, CompileTimeTyped,
+    ParseResult, StaticTyped,
 };
 use crate::{
     lexer::{self, LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal},
@@ -103,10 +103,10 @@ impl LogicValue {
     }
 }
 
-impl CompileTimeTyped for LogicValue {
-    fn get_compile_time_type(&self) -> Option<LsonType> {
+impl StaticTyped for LogicValue {
+    fn get_static_type(&self) -> Option<LsonType> {
         match self {
-            LogicValue::Literal(lson) => lson.get_compile_time_type(),
+            LogicValue::Literal(lson) => lson.get_static_type(),
             LogicValue::Variable(_) => None,
         }
     }
@@ -216,8 +216,8 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
     }
 }
 
-impl CompileTimeTyped for Lson {
-    fn get_compile_time_type(&self) -> Option<LsonType> {
+impl StaticTyped for Lson {
+    fn get_static_type(&self) -> Option<LsonType> {
         Some(self.into())
     }
 }
