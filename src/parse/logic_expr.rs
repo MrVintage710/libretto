@@ -240,44 +240,45 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicFactorExpr {
     }
 
     fn validate(&self, errors: &mut Vec<LibrettoCompileError>) {
+        
         todo!()
     }
 }
 
 impl StaticTyped for LogicFactorExpr {
     fn get_static_type(&self) -> Option<LsonType> {
-        let lhs_type = self.lhs.get_static_type();
-        if lhs_type.is_none() {return None}
+        let lhs = self.lhs.get_static_type();
+        if lhs.is_none() {return None}
+        let lhs = lhs.unwrap();
 
-        let mut types = Vec::new();
-        let mut ops = Vec::new();
-        types.push(lhs_type.unwrap());
+        if let Some((op, rhs)) = self.rhs.first() {
+            if let Some(rhs) = rhs.get_static_type() {
+                if let Some(expected_type) = get_factor_type(&lhs, op, &rhs) {
+                    for i in 0..self.rhs.len() - 1 {
+                        let new_lhs_type = &self.rhs[i].1;
+                        let new_op = &self.rhs[i+1].0;
+                        let new_rhs_type = &self.rhs[i+1].1;
+                        if let (Some(new_lhs_type), Some(new_rhs_type)) = (new_lhs_type.get_static_type(), new_rhs_type.get_static_type()) {
+                            let op_type = get_factor_type(&new_lhs_type, op, &new_rhs_type);
+                            if op_type.is_none() || (op_type.is_some() && expected_type != op_type.unwrap()) {
+                                return None;
+                            }
+                        }
+                    }
+                    return Some(expected_type);
+                }
+            }   
+            None
+        } else {
+            Some(lhs)
+        }
+    }
+}
 
-        for (op, factor) in &self.rhs {
-            let rhs_type = factor.get_static_type();
-            if rhs_type.is_none() {return None}
-            ops.push(op);
-            types.push(lhs_type.unwrap());
-        };
-
-        let expected_type = LsonType::None;
-
-        for i in 0..ops.len() {
-            let t1 = types[i];
-            let t2 = types[i+1];
-            let op = ops[i];
-
-            let product_type = match op {
-                FactorOperator::Mult => t1.get_product_type(t2),
-                FactorOperator::Div => t1.get_quotient_type(t2)
-            };
-
-            if product_typeDim
-
-            if expected_type == LsonType::None {
-                Fac
-            }
-        };
+fn get_factor_type(lhs : &LsonType, op : &FactorOperator, rhs : &LsonType) -> Option<LsonType> {
+    match op {
+        FactorOperator::Mult => lhs.get_product_type(*rhs),
+        FactorOperator::Div => lhs.get_quotient_type(*rhs),
     }
 }
     
@@ -292,8 +293,8 @@ mod tests {
 
     use crate::{
         lexer::{LibrettoLogicToken, LibrettoTokenQueue},
-        logic::lson::Lson,
-        parse::{self, LibrettoParsable, ParseResult, logic_expr::{TermOperator, FactorOperator}},
+        logic::lson::{Lson, LsonType},
+        parse::{self, LibrettoParsable, ParseResult, logic_expr::{TermOperator, FactorOperator}, StaticTyped},
     };
 
     use super::{LogicUnaryExpr, LogicValue, UnaryOperator, LogicTermExpr, LogicFactorExpr};
@@ -310,6 +311,18 @@ mod tests {
         let check = T::raw_check(&mut queue);
         assert!(check);
         assert_eq!(queue.cursor(), number_of_tokens)
+    }
+
+    fn check_type<'a, T: LibrettoParsable<'a, LibrettoLogicToken> + StaticTyped>(
+        source: &'a str,
+        var_type : Option<LsonType>,
+    ) {
+        let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
+        let mut errors = Vec::new();
+        if let Some(ast) = T::checked_parse(&mut queue, &mut errors) {
+            let ast_type = ast.get_static_type();
+            assert_eq!(var_type, ast_type)
+        }
     }
 
     fn parse_expr<'a, T: LibrettoParsable<'a, LibrettoLogicToken>>(source: &'a str) -> T {
@@ -382,6 +395,13 @@ mod tests {
         validate_expr::<LogicTermExpr>("!false", 0);
         validate_expr::<LogicTermExpr>("2 + 2", 0);
         validate_expr::<LogicTermExpr>("false + 3", 1);
+    }
+
+    #[test]
+    fn type_factor_expr() {
+        check_type::<LogicFactorExpr>("2*2.1*12", Some(LsonType::Float));
+        check_type::<LogicFactorExpr>("2*test*12", None);
+        check_type::<LogicFactorExpr>("\"test\"*5", None);
     }
 
     #[test]
