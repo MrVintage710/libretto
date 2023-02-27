@@ -71,7 +71,7 @@ where
 
     fn parse(queue: &mut LibrettoTokenQueue<'a, T>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self>;
 
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>);
+    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) -> LsonType;
 
     fn check(queue: &mut LibrettoTokenQueue<'a, T>) -> bool {
         if Self::raw_check(queue) {
@@ -128,8 +128,4 @@ macro_rules! parse_ast {
             }
         }
     };
-}
-
-pub trait StaticTyped {
-    fn get_static_type(&self) -> Option<LsonType>;
 }

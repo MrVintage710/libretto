@@ -4,7 +4,7 @@ use crate::{
     lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal}, parse_ast, logic::lson::{Lson, LsonType},
 };
 
-use super::{logic_value::LogicValue, LibrettoCompileError, LibrettoParsable, ParseResult, StaticTyped};
+use super::{logic_value::LogicValue, LibrettoCompileError, LibrettoParsable, ParseResult};
 
 //==================================================================================================
 //          Logic Unary Expression
@@ -51,8 +51,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
         }
     }
 
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) {
-        self.value.validate(errors);
+    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) -> LsonType {
         if let Some(op) = &self.operator {
             match op {
                 UnaryOperator::Negative => {
@@ -84,12 +83,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
                 },
             }
         }
-    }
-}
-
-impl StaticTyped for LogicUnaryExpr {
-    fn get_static_type(&self) -> Option<LsonType> {
-        self.value.get_static_type()
+        self.value.validate(errors)
     }
 }
 
@@ -154,7 +148,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicTermExpr {
         true
     }
 
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) {
+    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) -> LsonType {
         self.lhs.validate(errors);
         if !self.rhs.is_empty() {
             for i in 0..self.rhs.len()-1 {
@@ -239,14 +233,7 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicFactorExpr {
         Some(LogicFactorExpr { lhs, rhs })
     }
 
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) {
-        
-        todo!()
-    }
-}
-
-impl StaticTyped for LogicFactorExpr {
-    fn get_static_type(&self) -> Option<LsonType> {
+    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) -> LsonType {
         let lhs = self.lhs.get_static_type();
         if lhs.is_none() {return None}
         let lhs = lhs.unwrap();
@@ -294,7 +281,7 @@ mod tests {
     use crate::{
         lexer::{LibrettoLogicToken, LibrettoTokenQueue},
         logic::lson::{Lson, LsonType},
-        parse::{self, LibrettoParsable, ParseResult, logic_expr::{TermOperator, FactorOperator}, StaticTyped},
+        parse::{self, LibrettoParsable, ParseResult, logic_expr::{TermOperator, FactorOperator}},
     };
 
     use super::{LogicUnaryExpr, LogicValue, UnaryOperator, LogicTermExpr, LogicFactorExpr};
@@ -313,14 +300,14 @@ mod tests {
         assert_eq!(queue.cursor(), number_of_tokens)
     }
 
-    fn check_type<'a, T: LibrettoParsable<'a, LibrettoLogicToken> + StaticTyped>(
+    fn check_type<'a, T: LibrettoParsable<'a, LibrettoLogicToken>>(
         source: &'a str,
-        var_type : Option<LsonType>,
+        var_type : LsonType,
     ) {
         let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
         let mut errors = Vec::new();
         if let Some(ast) = T::checked_parse(&mut queue, &mut errors) {
-            let ast_type = ast.get_static_type();
+            let ast_type = ast.validate(&mut errors);
             assert_eq!(var_type, ast_type)
         }
     }
@@ -335,14 +322,16 @@ mod tests {
     fn validate_expr<'a, T: LibrettoParsable<'a, LibrettoLogicToken>>(
         source: &'a str,
         number_of_errors: usize,
+        static_type : LsonType
     ) -> Vec<parse::LibrettoCompileError> {
         let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
         let mut errors = Vec::new();
         let ast = T::checked_parse(&mut queue, &mut errors);
         assert!(ast.is_some());
         let ast = ast.unwrap();
-        ast.validate(&mut errors);
+        let ast_type = ast.validate(&mut errors);
         assert_eq!(errors.len(), number_of_errors);
+        assert_eq!(static_type, ast_type);
         errors
     }
 
@@ -370,9 +359,9 @@ mod tests {
 
     #[test]
     fn validate_unary_expr() {
-        validate_expr::<LogicUnaryExpr>("!false", 0);
-        validate_expr::<LogicUnaryExpr>("-1", 0);
-        validate_expr::<LogicUnaryExpr>("-false", 1);
+        validate_expr::<LogicUnaryExpr>("!false", 0, LsonType::Bool);
+        validate_expr::<LogicUnaryExpr>("-1", 0, LsonType::Int);
+        validate_expr::<LogicUnaryExpr>("-false", 1, LsonType::Bool);
     }
 
     #[test]
@@ -392,16 +381,16 @@ mod tests {
 
     #[test]
     fn validate_additive_expr() {
-        validate_expr::<LogicTermExpr>("!false", 0);
-        validate_expr::<LogicTermExpr>("2 + 2", 0);
-        validate_expr::<LogicTermExpr>("false + 3", 1);
+        validate_expr::<LogicTermExpr>("!false", 0, LsonType::Bool);
+        validate_expr::<LogicTermExpr>("2 + 2", 0, LsonType::Int);
+        validate_expr::<LogicTermExpr>("false + 3", 1, LsonType::None);
     }
 
     #[test]
     fn type_factor_expr() {
-        check_type::<LogicFactorExpr>("2*2.1*12", Some(LsonType::Float));
-        check_type::<LogicFactorExpr>("2*test*12", None);
-        check_type::<LogicFactorExpr>("\"test\"*5", None);
+        check_type::<LogicFactorExpr>("2*2.1*12", LsonType::Float);
+        check_type::<LogicFactorExpr>("2*test*12", LsonType::None);
+        check_type::<LogicFactorExpr>("\"test\"*5", LsonType::None);
     }
 
     #[test]

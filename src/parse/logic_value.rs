@@ -2,7 +2,7 @@ use std::collections::{btree_map::Values, HashMap};
 
 use super::{
     util::ParseCommaSeparatedList, LibrettoCompileError, LibrettoCompileResult, LibrettoParsable,
-    ParseResult, StaticTyped,
+    ParseResult,
 };
 use crate::{
     lexer::{self, LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal},
@@ -79,10 +79,10 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
         None
     }
 
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) {
+    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) -> LsonType {
         match self {
             LogicValue::Literal(lson) => lson.validate(errors),
-            LogicValue::Variable(_) => {},
+            LogicValue::Variable(_) => LsonType::None,
         }
     }
 }
@@ -98,15 +98,6 @@ impl LogicValue {
     pub fn get_value(&self) -> Option<&Lson> {
         match self {
             LogicValue::Literal(value) => Some(value),
-            LogicValue::Variable(_) => None,
-        }
-    }
-}
-
-impl StaticTyped for LogicValue {
-    fn get_static_type(&self) -> Option<LsonType> {
-        match self {
-            LogicValue::Literal(lson) => lson.get_static_type(),
             LogicValue::Variable(_) => None,
         }
     }
@@ -198,27 +189,23 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
         }
     }
 
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) {
+    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) -> LsonType {
         match self {
             Lson::None => errors.push(LibrettoCompileError::NullValueError),
             Lson::Array(values) => {
                 for i in values.iter() {
-                    i.validate(errors)
-                }
+                    i.validate(errors);
+                };
             }
             Lson::Struct(pairs) => {
                 for value in pairs.values() {
-                    value.validate(errors)
+                    value.validate(errors);
                 }
             }
             _ => {}
         }
-    }
-}
 
-impl StaticTyped for Lson {
-    fn get_static_type(&self) -> Option<LsonType> {
-        Some(self.into())
+        self.into()
     }
 }
 
@@ -269,7 +256,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicObjectKeyValue {
         }
     }
 
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) {
+    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) -> LsonType {
         self.value.validate(errors)
     }
 }

@@ -1,6 +1,7 @@
 use super::{LibrettoCompileResult, LibrettoParsable, ParseResult};
 use crate::{
     lexer::{LibrettoLogicToken, LogicOrdinal, Ordinal, LibrettoTokenQueue},
+    logic::lson::{LsonType},
     parse_ast,
 };
 use logos::Logos;
@@ -87,9 +88,20 @@ where
         }
     }
 
-    fn validate(&self, errors: &mut Vec<super::LibrettoCompileError>) {
-        for i in self.values.iter() {
-            i.validate(errors)
+    fn validate(&self, errors: &mut Vec<super::LibrettoCompileError>) -> LsonType{
+        if self.values.is_empty() {return LsonType::None;}
+        let expected_type = self.values.first().unwrap().validate(errors);
+        let mut return_expected = true;
+        
+        for i in 1..self.values.len() {
+            let element = &self.values[i];
+            return_expected = element.validate(errors) == expected_type;  
+        }
+
+        if return_expected {
+            expected_type
+        } else {
+            LsonType::None
         }
     }
 }
