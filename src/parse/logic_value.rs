@@ -2,7 +2,6 @@ use std::collections::{btree_map::Values, HashMap};
 
 use super::{
     util::ParseCommaSeparatedList, LibrettoCompileError, LibrettoCompileResult, LibrettoParsable,
-    ParseResult,
 };
 use crate::{
     lexer::{self, LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal},
@@ -88,9 +87,6 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
                     }
                     LibrettoLogicToken::IntLiteral(value) => {
                         Some(Lson::Int(value))
-                    }
-                    LibrettoLogicToken::Identifier(value) => {
-                        Some(Lson::Ident(value))
                     }
                     _ => None,
                 }

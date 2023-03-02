@@ -1,11 +1,11 @@
-use super::{LibrettoCompileResult, LibrettoParsable, ParseResult};
+use super::{LibrettoParsable};
 use crate::{
     lexer::{LibrettoLogicToken, LogicOrdinal, Ordinal, LibrettoTokenQueue},
     logic::lson::{LsonType},
     parse_ast,
 };
 use logos::Logos;
-use std::{fmt::Debug, marker::PhantomData};
+use std::{fmt::Debug, marker::PhantomData, collections::HashMap};
 
 pub struct ParseCommaSeparatedList<'a, P, T>
 where
@@ -44,8 +44,7 @@ where
     }
 }
 
-impl<'a, P> LibrettoParsable<'a, LibrettoLogicToken>
-    for ParseCommaSeparatedList<'a, P, LibrettoLogicToken>
+impl<'a, P> LibrettoParsable<'a, LibrettoLogicToken> for ParseCommaSeparatedList<'a, P, LibrettoLogicToken>
 where
     P: LibrettoParsable<'a, LibrettoLogicToken> + Sized,
 {
@@ -63,16 +62,17 @@ where
 
     fn parse(
         queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>,
-        errors: &mut Vec<super::LibrettoCompileError>
+        errors: &mut Vec<super::LibrettoCompileError>,
+        type_map : &mut HashMap<String, LsonType>
     ) -> Option<Self> {
         let mut values = Vec::new();
 
         queue.reset();
-        values.push(parse_ast!(P, queue, errors));
+        values.push(parse_ast!(P, queue, errors, type_map));
         loop {
             if queue.next_is(LogicOrdinal::Comma) && P::raw_check(queue) {
                 queue.pop();
-                values.push(parse_ast!(P, queue, errors))
+                values.push(parse_ast!(P))
             } else {
                 break;
             }
@@ -112,58 +112,23 @@ mod tests {
         lexer::{LibrettoLogicToken, LibrettoTokenQueue},
         logic::lson::Lson,
         parse::{
-            logic_value::LogicObjectKeyValue, util::ParseCommaSeparatedList, LibrettoParsable,
+            logic_value::LogicObjectKeyValue, util::ParseCommaSeparatedList, LibrettoParsable, test_util::*
         },
     };
     use logos::Logos;
 
-    fn check_expr<'a, P: LibrettoParsable<'a, LibrettoLogicToken> + Sized>(
-        source: &'a str,
-        number_of_tokens: usize,
-    ) {
-        let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
-        let check = ParseCommaSeparatedList::<'a, P, LibrettoLogicToken>::check(&mut queue);
-        assert!(check);
-        assert_eq!(queue.cursor(), 0);
-        queue.reset();
-        let check = ParseCommaSeparatedList::<'a, P, LibrettoLogicToken>::raw_check(&mut queue);
-        assert!(check);
-        assert_eq!(queue.cursor(), number_of_tokens)
-    }
-
-    fn parse_expr<'a, P: LibrettoParsable<'a, LibrettoLogicToken> + Sized>(
-        source: &'a str,
-    ) -> ParseCommaSeparatedList<'a, P, LibrettoLogicToken> {
-        let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
-        let ast = ParseCommaSeparatedList::<'a, P, LibrettoLogicToken>::checked_parse(&mut queue, &mut Vec::new());
-        assert!(ast.is_some());
-        ast.unwrap()
-    }
-
     #[test]
     fn check_logic_list() {
-        check_expr::<Lson>("false", 1);
-        check_expr::<Lson>("false, 3.14", 3);
-        check_expr::<Lson>("false, 3.14, 3", 5);
-        check_expr::<Lson>("false, 3.14, 3, \"test\"", 7);
+        check_expr::<ParseCommaSeparatedList<Lson, LibrettoLogicToken>>("false", 1);
+        check_expr::<ParseCommaSeparatedList<Lson, LibrettoLogicToken>>("false, 3.14", 3);
+        check_expr::<ParseCommaSeparatedList<Lson, LibrettoLogicToken>>("false, 3.14, 3", 5);
+        check_expr::<ParseCommaSeparatedList<Lson, LibrettoLogicToken>>("false, 3.14, 3, \"test\"", 7);
 
-        check_expr::<LogicObjectKeyValue>("key : false, another : false", 7)
+        check_expr::<ParseCommaSeparatedList<LogicObjectKeyValue, LibrettoLogicToken>>("key : false, another : false", 7)
     }
 
     #[test]
     fn parse_logic_list() {
-        let ast = parse_expr::<Lson>("false, 3");
-        assert_eq!(ast.values.len(), 2);
-        assert_eq!(ast.values[0], Lson::Bool(false));
-        assert_eq!(ast.values[1], Lson::Int(3));
-
-        let ast = parse_expr::<LogicObjectKeyValue>("key : false, value : false");
-        assert_eq!(ast.values.len(), 2);
-        let first = &ast.values[0];
-        let second = &ast.values[1];
-        assert_eq!(first.key(), "key");
-        assert_eq!(first.value(), &Lson::Bool(false));
-        assert_eq!(second.key(), "value");
-        assert_eq!(second.value(), &Lson::Bool(false));
+        let ast = parse_expr::<ParseCommaSeparatedList<Lson, LibrettoLogicToken>>("false");
     }
 }

@@ -15,7 +15,6 @@ pub type LibrettoFunction = Rc<dyn Fn(Vec<Lson>, &mut LibrettoRuntime) -> Lson>;
 #[strum_discriminants(name(LsonType))]
 pub enum Lson {
     None,
-    Ident(String),
     Int(i64),
     Float(f64),
     String(String),
@@ -124,7 +123,6 @@ impl Lson {
             Lson::Array(_) => LsonType::Array == t,
             Lson::Struct(_) => LsonType::Struct == t,
             Lson::Function(_) => LsonType::Function == t,
-            Lson::Ident(_) => LsonType::Ident == t,
         }
     }
 
@@ -144,7 +142,6 @@ impl ToString for LsonType {
             LsonType::Array => String::from("array"),
             LsonType::Struct => String::from("struct"),
             LsonType::Function => String::from("function"),
-            LsonType::Ident => String::from("ident"),
         }
     }
 }
@@ -384,7 +381,6 @@ impl Debug for Lson {
             Self::Array(arg0) => f.debug_tuple("Array").field(arg0).finish(),
             Self::Struct(arg0) => f.debug_tuple("Struct").field(arg0).finish(),
             Self::Function(arg0) => f.debug_tuple("Function").field(&"()").finish(),
-            Self::Ident(arg0) => f.debug_tuple("Ident").field(arg0).finish()
         }
     }
 }

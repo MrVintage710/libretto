@@ -4,7 +4,7 @@ use crate::{
     lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal}, parse_ast, logic::lson::{Lson, LsonType},
 };
 
-use super::{LibrettoCompileError, LibrettoParsable, ParseResult};
+use super::{LibrettoCompileError, LibrettoParsable};
 
 //==================================================================================================
 //          Logic Unary Expression
@@ -284,12 +284,10 @@ fn get_factor_type(lhs : &LsonType, op : &FactorOperator, rhs : &LsonType) -> Ls
 
 #[cfg(test)]
 mod tests {
-    use logos::Logos;
-
+    
     use crate::{
-        lexer::{LibrettoLogicToken, LibrettoTokenQueue},
         logic::lson::{Lson, LsonType},
-        parse::{self, LibrettoParsable, ParseResult, logic_expr::{TermOperator, FactorOperator}, test_util::*},
+        parse::{logic_expr::{TermOperator, FactorOperator}, test_util::*},
     };
 
     use super::{LogicUnaryExpr, UnaryOperator, LogicTermExpr, LogicFactorExpr};
@@ -315,10 +313,6 @@ mod tests {
         let ast = parse_expr::<LogicUnaryExpr>("3.14");
         assert_eq!(ast.operator, None);
         assert_eq!(ast.value, Lson::Float(3.14));
-        
-        let ast = parse_expr::<LogicUnaryExpr>("foo");
-        assert_eq!(ast.operator, None);
-        assert_eq!(ast.value, Lson::Ident("foo".to_string()));
     }
 
     #[test]
