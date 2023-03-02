@@ -1,4 +1,5 @@
 use logos::{Lexer, Logos};
+use crate::logic::lson::LsonType;
 use peekmore::{PeekMore, PeekMoreIterator};
 use std::{fmt::Debug, marker::PhantomData};
 use strum::EnumDiscriminants;
@@ -337,6 +338,18 @@ fn lex_bool(lex: &mut Lexer<LibrettoLogicToken>) -> bool {
     content.as_str() == "true"
 }
 
+fn lex_type(lex: &mut Lexer<LibrettoLogicToken>) -> LsonType {
+    match lex.slice() {
+        "float" => LsonType::Float,
+        "int" => LsonType::Int,
+        "string" => LsonType::String,
+        "bool" => LsonType::Bool,
+        "struct" => LsonType::Struct,
+        "array" => LsonType::Array,
+        _ => LsonType::None
+    }
+}
+
 impl<'a> Ordinal for LibrettoLogicToken {}
 
 #[derive(Debug, Logos, PartialEq, Clone, EnumDiscriminants)]
@@ -353,6 +366,9 @@ pub enum LibrettoLogicToken {
 
     #[regex("(true|false)", lex_bool, priority=4)]
     BoolLiteral(bool),
+
+    #[regex("(float|int|string|bool|struct|array)", lex_type, priority=4)]
+    Type(LsonType),
 
     #[regex("\"([^\"]*)\"", lex_string)]
     StringLiteral(String),

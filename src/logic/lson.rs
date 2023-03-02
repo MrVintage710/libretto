@@ -15,6 +15,7 @@ pub type LibrettoFunction = Rc<dyn Fn(Vec<Lson>, &mut LibrettoRuntime) -> Lson>;
 #[strum_discriminants(name(LsonType))]
 pub enum Lson {
     None,
+    Ident(String),
     Int(i64),
     Float(f64),
     String(String),
@@ -123,7 +124,12 @@ impl Lson {
             Lson::Array(_) => LsonType::Array == t,
             Lson::Struct(_) => LsonType::Struct == t,
             Lson::Function(_) => LsonType::Function == t,
+            Lson::Ident(_) => LsonType::Ident == t,
         }
+    }
+
+    pub fn get_type(&self) -> LsonType {
+        self.into()
     }
 }
 
@@ -138,50 +144,51 @@ impl ToString for LsonType {
             LsonType::Array => String::from("array"),
             LsonType::Struct => String::from("struct"),
             LsonType::Function => String::from("function"),
+            LsonType::Ident => String::from("ident"),
         }
     }
 }
 
 impl LsonType {
-    pub fn get_sum_type(&self, other : LsonType) -> Option<LsonType> {
+    pub fn get_sum_type(&self, other : LsonType) -> LsonType {
         match (self, other) {
             (LsonType::Float, LsonType::Float) | 
             (LsonType::Float, LsonType::Int) |
-            (LsonType::Int, LsonType::Float) => Some(LsonType::Float),
+            (LsonType::Int, LsonType::Float) => LsonType::Float,
             (_, LsonType::String) |
-            (LsonType::String, _) => Some(LsonType::String),
-            (LsonType::Int, LsonType::Int) => Some(LsonType::Int),
-            _ => None
+            (LsonType::String, _) => LsonType::String,
+            (LsonType::Int, LsonType::Int) => LsonType::Int,
+            _ => LsonType::None
         }
     }
 
-    pub fn get_difference_type(&self, other : LsonType) -> Option<LsonType> {
+    pub fn get_difference_type(&self, other : LsonType) -> LsonType {
         match (self, other) {
             (LsonType::Float, LsonType::Float) | 
             (LsonType::Float, LsonType::Int) |
-            (LsonType::Int, LsonType::Float) => Some(LsonType::Float),
-            (LsonType::Int, LsonType::Int) => Some(LsonType::Int),
-            _ => None
+            (LsonType::Int, LsonType::Float) => LsonType::Float,
+            (LsonType::Int, LsonType::Int) => LsonType::Int,
+            _ => LsonType::None
         }
     }
 
-    pub fn get_product_type(&self, other : LsonType) -> Option<LsonType> {
+    pub fn get_product_type(&self, other : LsonType) -> LsonType {
         match (self, other) {
             (LsonType::Float, LsonType::Float) | 
             (LsonType::Float, LsonType::Int) |
-            (LsonType::Int, LsonType::Float) => Some(LsonType::Float),
-            (LsonType::Int, LsonType::Int) => Some(LsonType::Int),
-            _ => None
+            (LsonType::Int, LsonType::Float) => LsonType::Float,
+            (LsonType::Int, LsonType::Int) => LsonType::Int,
+            _ => LsonType::None
         }
     }
 
-    pub fn get_quotient_type(&self, other : LsonType) -> Option<LsonType> {
+    pub fn get_quotient_type(&self, other : LsonType) -> LsonType {
         match (self, other) {
             (LsonType::Float, LsonType::Float) | 
             (LsonType::Float, LsonType::Int) |
-            (LsonType::Int, LsonType::Float) => Some(LsonType::Float),
-            (LsonType::Int, LsonType::Int) => Some(LsonType::Int),
-            _ => None
+            (LsonType::Int, LsonType::Float) => LsonType::Float,
+            (LsonType::Int, LsonType::Int) => LsonType::Int,
+            _ => LsonType::None
         }
     }
 }
@@ -377,6 +384,7 @@ impl Debug for Lson {
             Self::Array(arg0) => f.debug_tuple("Array").field(arg0).finish(),
             Self::Struct(arg0) => f.debug_tuple("Struct").field(arg0).finish(),
             Self::Function(arg0) => f.debug_tuple("Function").field(&"()").finish(),
+            Self::Ident(arg0) => f.debug_tuple("Ident").field(arg0).finish()
         }
     }
 }
@@ -434,7 +442,7 @@ impl LsonIndex for usize {
                     )
                 })
             }
-            _ => panic!("cannot access index {} of LSON {}", self, Type(value)),
+            _ => panic!("cannot access index {} of LSON {:?}", self, value.get_type()),
         }
     }
 }
@@ -460,7 +468,7 @@ impl LsonIndex for str {
         }
         match value {
             Lson::Struct(map) => map.entry(self.to_owned()).or_insert(Lson::None),
-            _ => panic!("cannot access key {:?} in JSON {}", self, Type(value)),
+            _ => panic!("cannot access key {:?} in JSON {:?}", self, value.get_type()),
         }
     }
 }
@@ -493,24 +501,6 @@ where
 
     fn index_or_insert<'l>(&self, value: &'l mut Lson) -> &'l mut Lson {
         (**self).index_or_insert(value)
-    }
-}
-
-/// Used in panic messages.
-struct Type<'a>(&'a Lson);
-
-impl<'a> Display for Type<'a> {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        match *self.0 {
-            Lson::None => formatter.write_str("undefined"),
-            Lson::Bool(_) => formatter.write_str("boolean"),
-            Lson::Int(_) => formatter.write_str("int"),
-            Lson::Float(_) => formatter.write_str("float"),
-            Lson::String(_) => formatter.write_str("string"),
-            Lson::Array(_) => formatter.write_str("array"),
-            Lson::Struct(_) => formatter.write_str("struct"),
-            Lson::Function(_) => formatter.write_str("function"),
-        }
     }
 }
 

@@ -129,3 +129,54 @@ macro_rules! parse_ast {
         }
     };
 }
+
+pub mod test_util {
+
+    use logos::Logos;
+
+    use crate::logic::lson::{LsonType, Lson};
+    use crate::lexer::{LibrettoLogicToken, LibrettoTokenQueue};
+    use crate::parse::LibrettoCompileError;
+
+    use super::LibrettoParsable;
+
+    pub fn check_expr<'a, T: LibrettoParsable<'a, LibrettoLogicToken>>(
+        source: &'a str,
+        number_of_tokens: usize,
+    ) {
+        let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
+        let check = T::check(&mut queue);
+        assert!(check);
+        assert_eq!(queue.cursor(), 0);
+        queue.reset();
+        let check = T::raw_check(&mut queue);
+        assert!(check);
+        assert_eq!(queue.cursor(), number_of_tokens)
+    }
+
+    pub fn parse_expr<'a, T: LibrettoParsable<'a, LibrettoLogicToken>>(source: &'a str) -> T {
+        let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
+        let result = T::checked_parse(&mut queue, &mut Vec::new());
+        assert!(result.is_some());
+        result.unwrap()
+    }
+
+    pub fn validate_expr<'a, T: LibrettoParsable<'a, LibrettoLogicToken>>(
+        source: &'a str,
+        number_of_errors: usize,
+        static_type : LsonType
+    ) -> Vec<LibrettoCompileError> {
+        let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
+        let mut errors = Vec::new();
+        let ast = T::checked_parse(&mut queue, &mut errors);
+        assert!(ast.is_some());
+        let ast = ast.unwrap();
+        let ast_type = ast.validate(&mut errors);
+        for error in errors.iter() {
+            println!("{:?}", error)
+        }
+        assert_eq!(errors.len(), number_of_errors);
+        assert_eq!(static_type, ast_type);
+        errors
+    }
+}
