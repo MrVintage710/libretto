@@ -28,9 +28,9 @@ where
     ///This function will check the token queue
     fn raw_check(queue: &mut LibrettoTokenQueue<'a, T>) -> bool;
 
-    fn parse(queue: &mut LibrettoTokenQueue<'a, T>, errors: &mut Vec<LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> Option<Self>;
+    fn parse(queue: &mut LibrettoTokenQueue<'a, T>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self>;
 
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>, type_map : &HashMap<String, LsonType>) -> LsonType;
+    fn validate(&self, errors: &mut Vec<LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> LsonType;
 
     fn check(queue: &mut LibrettoTokenQueue<'a, T>) -> bool {
         if Self::raw_check(queue) {
@@ -42,10 +42,10 @@ where
         }
     }
 
-    fn checked_parse(queue: &mut LibrettoTokenQueue<'a, T>, errors: &mut Vec<LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> Option<Self> {
+    fn checked_parse(queue: &mut LibrettoTokenQueue<'a, T>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
         queue.reset();
         if Self::check(queue) {
-            Self::parse(queue, errors, type_map)
+            Self::parse(queue, errors)
         } else {
             None
         }
@@ -78,9 +78,9 @@ pub enum LibrettoCompileError {
 
 #[macro_export]
 macro_rules! parse_ast {
-    ($type:ty, $queue:expr, $errors:expr, $type_map:expr) => {
+    ($type:ty, $queue:expr, $errors:expr) => {
         {
-            let result = <$type>::parse($queue, $errors, $type_map);
+            let result = <$type>::parse($queue, $errors);
             match result {
                 Some(value) => value,
                 None => return None
@@ -117,11 +117,7 @@ pub mod test_util {
 
     pub fn parse_expr<'a, T: LibrettoParsable<'a, LibrettoLogicToken>>(source: &'a str) -> T {
         let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
-        let mut types = HashMap::from([
-            (String::from("foo"), LsonType::Float),
-            (String::from("bar"), LsonType::String),
-        ]);
-        let result = T::checked_parse(&mut queue, &mut Vec::new(), &mut types);
+        let result = T::checked_parse(&mut queue, &mut Vec::new());
         assert!(result.is_some());
         result.unwrap()
     }
@@ -137,10 +133,10 @@ pub mod test_util {
             (String::from("foo"), LsonType::Float),
             (String::from("bar"), LsonType::String),
         ]);
-        let ast = T::checked_parse(&mut queue, &mut errors, &mut types);
+        let ast = T::checked_parse(&mut queue, &mut errors);
         assert!(ast.is_some());
         let ast = ast.unwrap();
-        let ast_type = ast.validate(&mut errors);
+        let ast_type = ast.validate(&mut errors, &mut types);
         for error in errors.iter() {
             println!("{:?}", error)
         }

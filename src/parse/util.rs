@@ -63,16 +63,15 @@ where
     fn parse(
         queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>,
         errors: &mut Vec<super::LibrettoCompileError>,
-        type_map : &mut HashMap<String, LsonType>
     ) -> Option<Self> {
         let mut values = Vec::new();
 
         queue.reset();
-        values.push(parse_ast!(P, queue, errors, type_map));
+        values.push(parse_ast!(P, queue, errors));
         loop {
             if queue.next_is(LogicOrdinal::Comma) && P::raw_check(queue) {
                 queue.pop();
-                values.push(parse_ast!(P))
+                values.push(parse_ast!(P, queue, errors))
             } else {
                 break;
             }
@@ -88,14 +87,14 @@ where
         }
     }
 
-    fn validate(&self, errors: &mut Vec<super::LibrettoCompileError>) -> LsonType{
+    fn validate(&self, errors: &mut Vec<super::LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> LsonType{
         if self.values.is_empty() {return LsonType::None;}
-        let expected_type = self.values.first().unwrap().validate(errors);
+        let expected_type = self.values.first().unwrap().validate(errors, type_map);
         let mut return_expected = true;
         
         for i in 1..self.values.len() {
             let element = &self.values[i];
-            return_expected = element.validate(errors) == expected_type;  
+            return_expected = element.validate(errors, type_map) == expected_type;  
         }
 
         if return_expected {

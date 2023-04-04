@@ -1,4 +1,4 @@
-use std::ops::Add;
+use std::{ops::Add, collections::HashMap};
 
 use crate::{
     lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal}, parse_ast, logic::lson::{Lson, LsonType},
@@ -51,7 +51,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
         }
     }
 
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) -> LsonType {
+    fn validate(&self, errors: &mut Vec<LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> LsonType {
         if let Some(op) = &self.operator {
             match op {
                 UnaryOperator::Negative => {
@@ -79,7 +79,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
                 },
             }
         }
-        self.value.validate(errors)
+        self.value.validate(errors, type_map)
     }
 }
 
@@ -144,11 +144,11 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicTermExpr {
         true
     }
 
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) -> LsonType {
-        let lhs = self.lhs.validate(errors);
+    fn validate(&self, errors: &mut Vec<LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> LsonType {
+        let lhs = self.lhs.validate(errors, type_map);
 
         if let Some((op, rhs)) = self.rhs.first() {
-            let rhs = rhs.validate(errors);
+            let rhs = rhs.validate(errors, type_map);
             let mut expected_type = get_term_type(&lhs, op, &rhs);
 
             if expected_type == LsonType::None {
@@ -158,7 +158,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicTermExpr {
 
             for i in 1..self.rhs.len() {
                 let (inner_op, inner)= &self.rhs[i];
-                let inner_type = inner.validate(errors);
+                let inner_type = inner.validate(errors, type_map);
                 let op_type = get_term_type(&expected_type, inner_op, &inner_type);
                 if op_type == LsonType::None{
                     errors.push(LibrettoCompileError::InvalidOperationError(expected_type.to_string(), op.to_string(), inner_type.to_string()));
@@ -175,8 +175,8 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicTermExpr {
 
 fn get_term_type(lhs : &LsonType, op : &TermOperator, rhs : &LsonType) -> LsonType {
     match op {
-        TermOperator::Plus => lhs.get_product_type(*rhs),
-        TermOperator::Minus => lhs.get_quotient_type(*rhs),
+        TermOperator::Plus => lhs.get_sum_type(*rhs),
+        TermOperator::Minus => lhs.get_difference_type(*rhs),
     }
 }
 
@@ -241,11 +241,11 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicFactorExpr {
         Some(LogicFactorExpr { lhs, rhs })
     }
 
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) -> LsonType {
-        let lhs = self.lhs.validate(errors);
+    fn validate(&self, errors: &mut Vec<LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> LsonType {
+        let lhs = self.lhs.validate(errors, type_map);
 
         if let Some((op, rhs)) = self.rhs.first() {
-            let rhs = rhs.validate(errors);
+            let rhs = rhs.validate(errors, type_map);
             let mut expected_type = get_factor_type(&lhs, op, &rhs);
 
             if expected_type == LsonType::None {
@@ -255,7 +255,7 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicFactorExpr {
 
             for i in 1..self.rhs.len() {
                 let (inner_op, inner)= &self.rhs[i];
-                let inner_type = inner.validate(errors);
+                let inner_type = inner.validate(errors, type_map);
                 let op_type = get_factor_type(&expected_type, inner_op, &inner_type);
                 if op_type == LsonType::None{
                     errors.push(LibrettoCompileError::InvalidOperationError(expected_type.to_string(), op.to_string(), inner_type.to_string()));

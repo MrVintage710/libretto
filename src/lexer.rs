@@ -184,7 +184,7 @@ pub trait Ordinal: Sized + Clone {
 //          Ordinal Groups
 //==================================================================================================
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct OrdinalGroup<'a, T, D>
 where
     T: Logos<'a> + PartialEq + Clone + Ordinal,
