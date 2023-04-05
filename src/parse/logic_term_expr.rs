@@ -143,7 +143,7 @@ mod tests {
     fn validate_term_expr() {
         validate_expr::<LogicTermExpr>("!false", 0, LsonType::Bool);
         validate_expr::<LogicTermExpr>("2 + 2 * 3", 0, LsonType::Int);
-        validate_expr::<LogicTermExpr>("2 + foo", 0, LsonType::None);
+        validate_expr::<LogicTermExpr>("2 + foo", 0, LsonType::Float);
         validate_expr::<LogicTermExpr>("false + 3", 1, LsonType::None);
     }
 }
