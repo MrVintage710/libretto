@@ -1,6 +1,8 @@
-mod logic_expr;
 mod logic_let;
 mod logic_value;
+mod logic_unary_expr;
+mod logic_term_expr;
+mod logic_factor_expr;
 mod util;
 
 use logos::Logos;
@@ -50,14 +52,6 @@ where
             None
         }
     }
-}
-
-//==================================================================================================
-//          Evaluator
-//==================================================================================================
-
-pub trait LibrettoEvaluator {
-    fn evaluate(&self, runtime: &mut LibrettoRuntime) -> Lson;
 }
 
 #[derive(Error, Debug)]
