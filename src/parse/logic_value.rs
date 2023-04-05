@@ -20,7 +20,6 @@ impl From<Lson> for LogicValue {
     }
 }
 
-
 impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
 
     fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {

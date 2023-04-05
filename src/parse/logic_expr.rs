@@ -4,7 +4,7 @@ use crate::{
     lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal}, parse_ast, logic::lson::{Lson, LsonType},
 };
 
-use super::{LibrettoCompileError, LibrettoParsable};
+use super::{LibrettoCompileError, LibrettoParsable, logic_value::LogicValue};
 
 //==================================================================================================
 //          Logic Unary Expression
@@ -19,7 +19,7 @@ pub enum UnaryOperator {
 #[derive(Debug, PartialEq)]
 pub struct LogicUnaryExpr {
     operator: Option<UnaryOperator>,
-    value: Lson,
+    value: LogicValue,
 }
 
 impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
@@ -34,7 +34,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
         } else {
             None
         };
-        let value = parse_ast!(Lson, queue, errors);
+        let value = parse_ast!(LogicValue, queue, errors);
 
         Some(LogicUnaryExpr {
             operator,
@@ -44,7 +44,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
 
     fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
         queue.next_is([LogicOrdinal::Bang, LogicOrdinal::Sub]);
-        if Lson::raw_check(queue) {
+        if LogicValue::raw_check(queue) {
             return true;
         } else {
             false
@@ -52,34 +52,36 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
     }
 
     fn validate(&self, errors: &mut Vec<LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> LsonType {
+        let lson_type = self.value.validate(errors, type_map);
+
         if let Some(op) = &self.operator {
             match op {
                 UnaryOperator::Negative => {
-                    match self.value {
-                        Lson::None => errors.push(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "null".to_string())),
-                        Lson::String(_) => errors.push(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "string".to_string())),
-                        Lson::Bool(_) => errors.push(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "bool".to_string())),
-                        Lson::Array(_) => errors.push(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "array".to_string())),
-                        Lson::Struct(_) => errors.push(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "struct".to_string())),
-                        Lson::Function(_) => errors.push(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "function".to_string())),
+                    match lson_type {
+                        LsonType::None => errors.push(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "null".to_string())),
+                        LsonType::String => errors.push(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "string".to_string())),
+                        LsonType::Bool => errors.push(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "bool".to_string())),
+                        LsonType::Array => errors.push(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "array".to_string())),
+                        LsonType::Struct => errors.push(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "struct".to_string())),
+                        LsonType::Function => errors.push(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "function".to_string())),
                         _ => {}
                     }
                 },
                 UnaryOperator::Bang => {
-                    match self.value {
-                        Lson::None => errors.push(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "null".to_string())),
-                        Lson::String(_) => errors.push(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "string".to_string())),
-                        Lson::Float(_) => errors.push(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "float".to_string())),
-                        Lson::Int(_) => errors.push(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "int".to_string())),
-                        Lson::Array(_) => errors.push(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "array".to_string())),
-                        Lson::Struct(_) => errors.push(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "struct".to_string())),
-                        Lson::Function(_) => errors.push(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "function".to_string())),
+                    match lson_type {
+                        LsonType::None => errors.push(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "null".to_string())),
+                        LsonType::Int => errors.push(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "int".to_string())),
+                        LsonType::Float => errors.push(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "float".to_string())),
+                        LsonType::String => errors.push(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "string".to_string())),
+                        LsonType::Array => errors.push(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "array".to_string())),
+                        LsonType::Struct => errors.push(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "struct".to_string())),
+                        LsonType::Function => errors.push(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "function".to_string())),
                         _ => {}
                     }
                 },
             }
         }
-        self.value.validate(errors, type_map)
+        lson_type
     }
 }
 
@@ -109,6 +111,15 @@ pub struct LogicTermExpr {
 }
 
 impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicTermExpr {
+
+    fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
+        if !LogicFactorExpr::raw_check(queue) {
+            return false;
+        };
+        while queue.next_is([LogicOrdinal::Add, LogicOrdinal::Sub]) && LogicFactorExpr::raw_check(queue) {}
+        true
+    }
+    
     fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
         let lhs = parse_ast!(LogicFactorExpr, queue, errors);
         let mut rhs = Vec::new();
@@ -134,14 +145,6 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicTermExpr {
         }
 
         Some(LogicTermExpr { lhs, rhs })
-    }
-
-    fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
-        if !LogicFactorExpr::raw_check(queue) {
-            return false;
-        };
-        while queue.next_is([LogicOrdinal::Add, LogicOrdinal::Sub]) && LogicFactorExpr::raw_check(queue) {}
-        true
     }
 
     fn validate(&self, errors: &mut Vec<LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> LsonType {
@@ -287,7 +290,7 @@ mod tests {
     
     use crate::{
         logic::lson::{Lson, LsonType},
-        parse::{logic_expr::{TermOperator, FactorOperator}, test_util::*},
+        parse::{logic_expr::{TermOperator, FactorOperator}, test_util::*, logic_value::LogicValue},
     };
 
     use super::{LogicUnaryExpr, UnaryOperator, LogicTermExpr, LogicFactorExpr};
@@ -304,15 +307,15 @@ mod tests {
     fn parse_unary_expr() {
         let ast = parse_expr::<LogicUnaryExpr>("!false");
         assert_eq!(ast.operator, Some(UnaryOperator::Bang));
-        assert_eq!(ast.value, Lson::Bool(false));
+        assert_eq!(ast.value, LogicValue::Literal(Lson::Bool(false)));
 
         let ast = parse_expr::<LogicUnaryExpr>("-12");
         assert_eq!(ast.operator, Some(UnaryOperator::Negative));
-        assert_eq!(ast.value, Lson::Int(12));
+        assert_eq!(ast.value, LogicValue::Literal(Lson::Int(12)));
 
         let ast = parse_expr::<LogicUnaryExpr>("3.14");
         assert_eq!(ast.operator, None);
-        assert_eq!(ast.value, Lson::Float(3.14));
+        assert_eq!(ast.value, LogicValue::Literal(Lson::Float(3.14)));
     }
 
     #[test]
@@ -335,22 +338,21 @@ mod tests {
         let ast = parse_expr::<LogicTermExpr>("2+3");
         assert_eq!(ast.lhs, parse_expr::<LogicFactorExpr>("2"));
         assert_eq!(ast.rhs[0], (TermOperator::Plus, parse_expr::<LogicFactorExpr>("3")));
+
+        let ast = parse_expr::<LogicTermExpr>("2+2+2");
+        assert_eq!(ast.lhs, parse_expr::<LogicFactorExpr>("2"));
+        assert_eq!(ast.rhs[0], (TermOperator::Plus, parse_expr::<LogicFactorExpr>("2")));
+        assert_eq!(ast.rhs[1], (TermOperator::Plus, parse_expr::<LogicFactorExpr>("2")));
     }
 
     #[test]
     fn validate_term_expr() {
         validate_expr::<LogicTermExpr>("!false", 0, LsonType::Bool);
         validate_expr::<LogicTermExpr>("2 + 2 * 3", 0, LsonType::Int);
-        validate_expr::<LogicTermExpr>("2 + test", 0, LsonType::None);
+        validate_expr::<LogicTermExpr>("2 + foo", 0, LsonType::None);
         validate_expr::<LogicTermExpr>("false + 3", 1, LsonType::None);
     }
 
-    #[test]
-    fn validate_factor_expr() {
-        validate_expr::<LogicFactorExpr>("!false", 0, LsonType::Bool);
-        validate_expr::<LogicFactorExpr>("2 * 2", 0, LsonType::Int);
-        validate_expr::<LogicFactorExpr>("false * 3", 1, LsonType::None);
-    }
 
     #[test]
     fn check_factor_expr() {
@@ -366,5 +368,12 @@ mod tests {
         let ast = parse_expr::<LogicFactorExpr>("2*4*6");
         assert_eq!(ast.lhs, parse_expr::<LogicUnaryExpr>("2"));
         assert_eq!(ast.rhs, vec![(FactorOperator::Mult, parse_expr::<LogicUnaryExpr>("4")), (FactorOperator::Mult, parse_expr::<LogicUnaryExpr>("6"))]);
+    }
+
+    #[test]
+    fn validate_factor_expr() {
+        validate_expr::<LogicFactorExpr>("!false", 0, LsonType::Bool);
+        validate_expr::<LogicFactorExpr>("2 * 2", 0, LsonType::Int);
+        validate_expr::<LogicFactorExpr>("false * 3", 1, LsonType::None);
     }
 }
