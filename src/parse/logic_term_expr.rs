@@ -26,7 +26,7 @@ impl ToString for TermOperator {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct LogicTermExpr {
     lhs: LogicFactorExpr,
     rhs: Vec<(TermOperator, LogicFactorExpr)>,

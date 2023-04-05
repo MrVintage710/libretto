@@ -188,6 +188,29 @@ impl LsonType {
             _ => LsonType::None
         }
     }
+
+    pub fn get_comparison_type(&self, other : LsonType) -> LsonType {
+        match (self, other) {
+            (LsonType::Int, LsonType::Float) |
+            (LsonType::Float, LsonType::Int) => LsonType::Bool,
+            _ => LsonType::None
+        }
+    }
+
+    pub fn get_equality_type(&self, other : LsonType) -> LsonType {
+        match (self, other) {
+            (LsonType::Int, LsonType::Float) |
+            (LsonType::Float, LsonType::Int) |
+            (LsonType::Int, LsonType::Int) |
+            (LsonType::Float, LsonType::Float) |
+            (LsonType::String, LsonType::String) |
+            (LsonType::Bool, LsonType::Bool) |
+            (LsonType::Array, LsonType::Array) |
+            (LsonType::Struct, LsonType::Struct) |
+            (LsonType::Function, LsonType::Function) => LsonType::Bool,
+            _ => LsonType::None
+        }
+    }
 }
 
 impl From<i64> for Lson {

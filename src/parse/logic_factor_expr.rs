@@ -1,12 +1,12 @@
-//==================================================================================================
-//          Factor Expression
-//==================================================================================================
-
 use std::collections::HashMap;
 
 use crate::{lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal}, parse_ast};
 use crate::logic::lson::LsonType;
 use super::{logic_unary_expr::LogicUnaryExpr, LibrettoParsable, LibrettoCompileError};
+
+//==================================================================================================
+//          Factor Expression
+//==================================================================================================
 
 #[derive(Debug, PartialEq)]
 pub enum FactorOperator {

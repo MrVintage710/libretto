@@ -439,6 +439,9 @@ pub enum LibrettoLogicToken {
     #[token(":")]
     Colon,
 
+    #[token("!=", priority = 2)]
+    InverseEquality,
+
     #[token("==", priority = 2)]
     Equality,
 

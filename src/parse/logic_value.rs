@@ -1,13 +1,14 @@
-use std::collections::{btree_map::Values, HashMap};
+use std::collections::HashMap;
 
 use super::{
     util::ParseCommaSeparatedList, LibrettoCompileError, LibrettoParsable,
 };
 use crate::{
-    lexer::{self, LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal},
+    lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal},
     logic::lson::{Lson, LsonType},
     parse_ast,
 };
+
 
 #[derive(Debug, PartialEq)]
 pub enum LogicValue {
@@ -222,12 +223,9 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicObjectKeyValue {
 mod tests {
     use std::collections::HashMap;
 
-    use logos::Logos;
-
     use crate::{
-        lexer::{LibrettoLogicToken, LibrettoTokenQueue},
         logic::lson::{Lson, LsonType},
-        parse::{logic_value::LogicObjectKeyValue, LibrettoParsable, test_util::*},
+        parse::{logic_value::LogicObjectKeyValue, test_util::*},
     };
 
     use super::LogicValue;
