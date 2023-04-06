@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
 use crate::lexer::{LibrettoLogicToken, LogicOrdinal };
-use crate::logic::lson::{LsonType};
+use crate::lson::{LsonType};
 use super::LibrettoCompileError;
 use super::{logic_term_expr::LogicTermExpr, LibrettoParsable};
 
@@ -64,7 +66,7 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicComparisonExpr {
         Some(LogicComparisonExpr { lhs, rhs })
     }
 
-    fn validate(&self, errors: &mut Vec<super::LibrettoCompileError>, type_map : &mut std::collections::HashMap<String, crate::logic::lson::LsonType>) -> crate::logic::lson::LsonType {
+    fn validate(&self, errors: &mut Vec<super::LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> LsonType {
         let lhs = self.lhs.validate(errors, type_map);
 
         if let Some((op, rhs)) = self.rhs.first() {
@@ -105,7 +107,7 @@ fn get_comaprison_type(lhs : &LsonType, op : &ComparisonOperator, rhs : &LsonTyp
 mod tests {
 
     use crate::{
-        logic::lson::LsonType,
+        lson::LsonType,
         parse::test_util::*,
     };
 

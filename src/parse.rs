@@ -9,14 +9,13 @@ mod util;
 
 use logos::Logos;
 use std::{
-    fmt::{Debug}, collections::HashMap,
+    fmt::Debug, collections::HashMap,
 };
 use thiserror::Error;
 
 use crate::{
-    logic::lson::{LsonType, Lson},
-    lexer::{LibrettoTokenQueue, Ordinal},
-    runtime::LibrettoRuntime,
+    lson::{LsonType, Lson},
+    lexer::{LibrettoTokenQueue, Ordinal}, runtime::LibrettoRuntime,
 };
 
 //==================================================================================================
@@ -56,6 +55,14 @@ where
     }
 }
 
+//==================================================================================================
+//          Evaluator
+//==================================================================================================
+
+pub trait LibrettoEvaluator {
+    fn evaluate(&self, runtime: &mut LibrettoRuntime) -> Lson;
+}
+
 #[derive(Error, Debug)]
 pub enum LibrettoCompileError {
     #[error("Values are not allowed to be set to null.")]
@@ -91,7 +98,7 @@ pub mod test_util {
 
     use logos::Logos;
 
-    use crate::logic::lson::{LsonType, Lson};
+    use crate::lson::LsonType;
     use crate::lexer::{LibrettoLogicToken, LibrettoTokenQueue};
     use crate::parse::LibrettoCompileError;
 

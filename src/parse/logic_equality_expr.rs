@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::lexer::{LibrettoLogicToken, LogicOrdinal };
-use crate::logic::lson::{LsonType};
+use crate::lson::{LsonType};
 use super::LibrettoCompileError;
 use super::logic_comparison_expr::LogicComparisonExpr;
 use super::{logic_term_expr::LogicTermExpr, LibrettoParsable};
@@ -102,7 +102,7 @@ fn get_equality_type(lhs : &LsonType, op : &EqualityOperator, rhs : &LsonType) -
 mod tests {
 
     use crate::{
-        logic::lson::LsonType,
+        lson::LsonType,
         parse::test_util::*,
     };
 

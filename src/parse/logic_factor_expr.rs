@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal}, parse_ast};
-use crate::logic::lson::LsonType;
+use crate::lson::LsonType;
 use super::{logic_unary_expr::LogicUnaryExpr, LibrettoParsable, LibrettoCompileError};
 
 //==================================================================================================
@@ -109,7 +109,7 @@ fn get_factor_type(lhs : &LsonType, op : &FactorOperator, rhs : &LsonType) -> Ls
 mod tests {
 
     use crate::{
-        logic::lson::{Lson, LsonType},
+        lson::{Lson, LsonType},
         parse::{test_util::*, logic_value::LogicValue},
     };
 

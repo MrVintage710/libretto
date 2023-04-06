@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::logic::lson::Lson;
+use crate::lson::Lson;
 
 pub trait LibrettoDataManager {
     fn on_mutate(&self, identifier: &str, old: Lson, new: Lson) -> Lson;

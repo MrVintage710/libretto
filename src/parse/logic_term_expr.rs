@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 
 use crate::lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal};
-use crate::logic::lson::LsonType;
+use crate::lson::LsonType;
 use crate::parse_ast;
 use super::LibrettoCompileError;
 use super::logic_factor_expr::LogicFactorExpr;
@@ -113,7 +113,7 @@ fn get_term_type(lhs : &LsonType, op : &TermOperator, rhs : &LsonType) -> LsonTy
 mod tests {
 
     use crate::{
-        logic::lson::{Lson, LsonType},
+        lson::{Lson, LsonType},
         parse::{test_util::*, logic_value::LogicValue, logic_factor_expr::LogicFactorExpr},
     };
 

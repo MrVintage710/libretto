@@ -2,7 +2,7 @@ mod data;
 mod event;
 pub mod function;
 
-use crate::logic::lson::Lson;
+use crate::lson::Lson;
 use std::collections::HashMap;
 
 use self::{data::LibrettoDataManager, event::LibrettoEventListener};

@@ -1,4 +1,4 @@
 mod lexer;
-mod logic;
+mod lson;
 mod parse;
 mod runtime;

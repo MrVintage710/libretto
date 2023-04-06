@@ -1,14 +1,13 @@
 use std::collections::HashMap;
 
 use super::{
-    util::ParseCommaSeparatedList, LibrettoCompileError, LibrettoParsable,
+    util::{CommaSeparatedList, KeyValuePair}, LibrettoCompileError, LibrettoParsable, LibrettoEvaluator,
 };
 use crate::{
     lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal},
-    logic::lson::{Lson, LsonType},
-    parse_ast,
+    lson::{Lson, LsonType},
+    parse_ast, runtime::LibrettoRuntime,
 };
-
 
 #[derive(Debug, PartialEq)]
 pub enum LogicValue {
@@ -57,14 +56,30 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
     }
 }
 
+impl LibrettoEvaluator for LogicValue {
+    fn evaluate(&self, runtime: &mut LibrettoRuntime) -> Lson {
+        match self {
+            LogicValue::Literal(lson) => {
+                return lson.clone();
+            },
+            LogicValue::Variable(ident) => {
+                return Lson::None;
+            },
+        }
+    }
+}
+
 //==================================================================================================
 //          Lson Parsable
 //==================================================================================================
 
+type ObjectTerm<'a> = CommaSeparatedList<'a, KeyValuePair<'a, Lson, LibrettoLogicToken>, LibrettoLogicToken>;
+type ArrayTerm<'a> = CommaSeparatedList<'a, Lson, LibrettoLogicToken>;
+
 impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
     fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
         if queue.next_is(LogicOrdinal::LeftCurlyBracket) {
-            if !ParseCommaSeparatedList::<'a, LogicObjectKeyValue, LibrettoLogicToken>::raw_check(
+            if !ObjectTerm::<'a>::raw_check(
                 queue,
             ) {
                 return false;
@@ -74,7 +89,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
             }
             true
         } else if queue.next_is(LogicOrdinal::LeftBracket) {
-            if !ParseCommaSeparatedList::<'a, Lson, LibrettoLogicToken>::raw_check(queue) {
+            if !ArrayTerm::<'a>::raw_check(queue) {
                 return false;
             }
             if !queue.next_is(LogicOrdinal::RightBracket) {
@@ -97,7 +112,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
         if let Some(token) = queue.pop() {
             if token.check_ordinal(LogicOrdinal::LeftCurlyBracket) {
                 let pairs = parse_ast!(
-                    ParseCommaSeparatedList::<'a, LogicObjectKeyValue, LibrettoLogicToken>,
+                    ObjectTerm::<'a>,
                     queue,
                     errors
                 );
@@ -107,12 +122,12 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
                 let data: HashMap<String, Lson> = pairs
                     .values()
                     .iter()
-                    .map(|e| (e.key.clone(), e.value.clone()))
+                    .map(|e| (e.key().to_string(), e.value().clone()))
                     .collect();
                 Some(Lson::Struct(data))
             } else if token.check_ordinal(LogicOrdinal::LeftBracket) {
                 let pairs = parse_ast!(
-                    ParseCommaSeparatedList::<'a, Lson, LibrettoLogicToken>,
+                    ArrayTerm::<'a>,
                     queue,
                     errors
                 );
@@ -164,58 +179,6 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
 }
 
 //==================================================================================================
-//          LogicKeyValue
-//==================================================================================================
-
-#[derive(Debug, PartialEq)]
-pub struct LogicObjectKeyValue {
-    key: String,
-    value: Lson,
-}
-
-impl LogicObjectKeyValue {
-    pub fn key(&self) -> &str {
-        &self.key
-    }
-
-    pub fn value(&self) -> &Lson {
-        &self.value
-    }
-}
-
-impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicObjectKeyValue {
-    fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
-        if !queue.next_is(LogicOrdinal::Identifier) {
-            return false;
-        }
-        if !queue.next_is(LogicOrdinal::Colon) {
-            return false;
-        }
-        if !Lson::raw_check(queue) {
-            return false;
-        }
-        true
-    }
-
-    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
-        queue.reset();
-        let ident = queue.pop_if_next_is(LogicOrdinal::Identifier).unwrap();
-        queue.pop_if_next_is(LogicOrdinal::Colon);
-        let value = parse_ast!(Lson, queue, errors);
-
-        if let LibrettoLogicToken::Identifier(key) = ident {
-            Some(LogicObjectKeyValue { key, value })
-        } else {
-            None
-        }
-    }
-
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> LsonType {
-        self.value.validate(errors, type_map)
-    }
-}
-
-//==================================================================================================
 //          Tests
 //==================================================================================================
 
@@ -224,34 +187,11 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::{
-        logic::lson::{Lson, LsonType},
-        parse::{logic_value::LogicObjectKeyValue, test_util::*},
+        lson::{Lson, LsonType},
+        parse::test_util::*,
     };
 
-    use super::LogicValue;
-
-    #[test]
-    fn check_key_value_pairs() {
-        check_expr::<LogicObjectKeyValue>("key : \"value\"", 3);
-        check_expr::<LogicObjectKeyValue>("key : false", 3);
-        check_expr::<LogicObjectKeyValue>("key : 3.14", 3);
-        check_expr::<LogicObjectKeyValue>("key : 3", 3);
-    }
-
-    #[test]
-    fn parse_key_value_pairs() {
-        let ast = parse_expr::<LogicObjectKeyValue>("key : \"value\"");
-        assert_eq!(ast.key, "key");
-        assert_eq!(ast.value, Lson::String("value".to_string()))
-    }
-
-    #[test]
-    fn validate_key_value_pairs() {
-        validate_expr::<LogicObjectKeyValue>("key : \"value\"", 0, LsonType::String);
-        validate_expr::<LogicObjectKeyValue>("key : false", 0, LsonType::Bool);
-        validate_expr::<LogicObjectKeyValue>("key : 3.14", 0, LsonType::Float);
-        validate_expr::<LogicObjectKeyValue>("key : 2", 0, LsonType::Int);
-    }
+    use super::*;
 
     #[test]
     fn check_lson() {

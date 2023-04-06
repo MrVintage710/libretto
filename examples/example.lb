@@ -4,7 +4,7 @@
 <
 
 //Any logic component only shares state with other logic blocks within it's line.
-//The Only exception are logic blocks that are declared outside of a dialog.
+//The Only exceptions are logic blocks that are declared outside of a dialog.
 //These blocks are considered global and will run when the script starts
 
 //You can request data from the runtime with the request keyword. If the resource isn't available, then the execution fails.

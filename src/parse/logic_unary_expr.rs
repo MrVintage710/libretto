@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal}, parse_ast};
-use crate::logic::lson::LsonType;
+use crate::lson::LsonType;
 use super::{logic_value::LogicValue, LibrettoParsable, LibrettoCompileError};
 
 //==================================================================================================
@@ -91,7 +91,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
 mod tests {
 
     use crate::{
-        logic::lson::{Lson, LsonType},
+        lson::{Lson, LsonType},
         parse::{test_util::*, logic_value::LogicValue},
     };
 
