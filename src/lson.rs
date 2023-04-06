@@ -21,7 +21,7 @@ pub enum Lson {
     Bool(bool),
     Array(Vec<Lson>),
     Struct(HashMap<String, Lson>),
-    Function(LibrettoFunction),
+    Function(LibrettoFunction, LsonType),
 }
 
 impl Lson {
@@ -122,7 +122,7 @@ impl Lson {
             Lson::Bool(_) => LsonType::Bool == t,
             Lson::Array(_) => LsonType::Array == t,
             Lson::Struct(_) => LsonType::Struct == t,
-            Lson::Function(_) => LsonType::Function == t,
+            Lson::Function(_, _) => LsonType::Function == t,
         }
     }
 
@@ -403,7 +403,7 @@ impl Debug for Lson {
             Self::Bool(arg0) => f.debug_tuple("Bool").field(arg0).finish(),
             Self::Array(arg0) => f.debug_tuple("Array").field(arg0).finish(),
             Self::Struct(arg0) => f.debug_tuple("Struct").field(arg0).finish(),
-            Self::Function(arg0) => f.debug_tuple("Function").field(&"()").finish(),
+            Self::Function(arg0, arg1) => f.write_str(format!("Function() -> {}", arg1.to_string()).as_str()),
         }
     }
 }
@@ -417,7 +417,7 @@ impl PartialEq for Lson {
             (Self::Bool(l0), Self::Bool(r0)) => l0 == r0,
             (Self::Array(l0), Self::Array(r0)) => l0 == r0,
             (Self::Struct(l0), Self::Struct(r0)) => l0 == r0,
-            (Self::Function(l0), Self::Function(r0)) => false,
+            (Self::Function(l0, l1), Self::Function(r0, r1)) => false,
             _ => core::mem::discriminant(self) == core::mem::discriminant(other),
         }
     }

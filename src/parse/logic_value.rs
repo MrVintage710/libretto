@@ -60,10 +60,10 @@ impl LibrettoEvaluator for LogicValue {
     fn evaluate(&self, runtime: &mut LibrettoRuntime) -> Lson {
         match self {
             LogicValue::Literal(lson) => {
-                return lson.clone();
+                lson.clone()
             },
             LogicValue::Variable(ident) => {
-                return Lson::None;
+                runtime.get_data(&ident).clone()
             },
         }
     }
@@ -74,28 +74,26 @@ impl LibrettoEvaluator for LogicValue {
 //==================================================================================================
 
 type ObjectTerm<'a> = CommaSeparatedList<'a, KeyValuePair<'a, Lson, LibrettoLogicToken>, LibrettoLogicToken>;
+type FunctionParams<'a> = CommaSeparatedList<'a, KeyValuePair<'a, LsonType, LibrettoLogicToken>, LibrettoLogicToken>;
 type ArrayTerm<'a> = CommaSeparatedList<'a, Lson, LibrettoLogicToken>;
 
 impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
     fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
         if queue.next_is(LogicOrdinal::LeftCurlyBracket) {
-            if !ObjectTerm::<'a>::raw_check(
-                queue,
-            ) {
-                return false;
-            }
-            if !queue.next_is(LogicOrdinal::RightCurlyBracket) {
-                return false;
-            }
-            true
+            ObjectTerm::<'a>::raw_check(queue) &&
+            queue.next_is(LogicOrdinal::RightCurlyBracket)
         } else if queue.next_is(LogicOrdinal::LeftBracket) {
-            if !ArrayTerm::<'a>::raw_check(queue) {
-                return false;
-            }
-            if !queue.next_is(LogicOrdinal::RightBracket) {
-                return false;
-            }
-            true
+            ArrayTerm::<'a>::raw_check(queue) &&
+            queue.next_is(LogicOrdinal::RightBracket)
+        } else if queue.next_is(LogicOrdinal::LeftParen) {
+//            if ArrayTerm::<'a>::raw_check(queue) &&
+//            queue.next_is(LogicOrdinal::RightParen){
+//                queue.next_is(LogicOrdinal::Arrow);
+//                queue.next_is(LogicOrdinal::Type);
+//                return true;
+//            }
+
+            false
         } else if queue.next_is([
             LogicOrdinal::StringLiteral,
             LogicOrdinal::BoolLiteral,
@@ -175,6 +173,29 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
         }
 
         self.into()
+    }
+}
+
+//==================================================================================================
+//          Lson Parsable
+//==================================================================================================
+
+impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LsonType {
+    fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
+        queue.next_is([LogicOrdinal::Type])
+    }
+
+    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
+        let token = queue.pop();
+        if let Some(LibrettoLogicToken::Type(t)) = token {
+            return Some(t)
+        }
+
+        None
+    }
+
+    fn validate(&self, errors: &mut Vec<LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> LsonType {
+        *self
     }
 }
 

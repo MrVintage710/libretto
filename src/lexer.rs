@@ -346,6 +346,7 @@ fn lex_type(lex: &mut Lexer<LibrettoLogicToken>) -> LsonType {
         "bool" => LsonType::Bool,
         "struct" => LsonType::Struct,
         "array" => LsonType::Array,
+        "function" => LsonType::Function,
         _ => LsonType::None
     }
 }
@@ -367,7 +368,7 @@ pub enum LibrettoLogicToken {
     #[regex("(true|false)", lex_bool, priority=4)]
     BoolLiteral(bool),
 
-    #[regex("(float|int|string|bool|struct|array)", lex_type, priority=4)]
+    #[regex("(float|int|string|bool|struct|array|function)", lex_type, priority=4)]
     Type(LsonType),
 
     #[regex("\"([^\"]*)\"", lex_string)]
@@ -393,18 +394,6 @@ pub enum LibrettoLogicToken {
 
     #[token("const")]
     Const,
-
-    #[token("int")]
-    Int,
-
-    #[token("float")]
-    Float,
-
-    #[token("string")]
-    String,
-
-    #[token("bool")]
-    Bool,
 
     #[token("{")]
     LeftCurlyBracket,
@@ -450,6 +439,9 @@ pub enum LibrettoLogicToken {
 
     #[token(">=", priority = 2)]
     GreaterThanEquality,
+
+    #[token("->", priority = 2)]
+    Arrow,
 
     #[token("<")]
     LessThan,
