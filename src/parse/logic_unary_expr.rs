@@ -86,13 +86,15 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
 impl LibrettoEvaluator for LogicUnaryExpr {
     fn evaluate(&self, runtime: &mut LibrettoRuntime) -> Lson {
         let value = self.value.evaluate(runtime);
-        if let Some(op) = self.operator {
-            match (op, value.get_type()) {
-                _ => {}
+        if let Some(op) = &self.operator {
+            match op {
+                UnaryOperator::Negative => todo!(),
+                UnaryOperator::Bang => !value,
             }
         } else {
             value
         }
+
     }
 }
 
@@ -138,5 +140,11 @@ mod tests {
         validate_expr::<LogicUnaryExpr>("!false", 0, LsonType::Bool);
         validate_expr::<LogicUnaryExpr>("-1", 0, LsonType::Int);
         validate_expr::<LogicUnaryExpr>("-false", 1, LsonType::Bool);
+    }
+
+    #[test]
+    fn evaluate_unary_expr() {
+        evaluate_expr::<LogicUnaryExpr>("!false", true.into());
+        evaluate_expr::<LogicUnaryExpr>("bar", true.into());
     }
 }

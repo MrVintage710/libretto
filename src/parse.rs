@@ -98,11 +98,12 @@ pub mod test_util {
 
     use logos::Logos;
 
-    use crate::lson::LsonType;
+    use crate::lson::{LsonType, Lson};
     use crate::lexer::{LibrettoLogicToken, LibrettoTokenQueue};
     use crate::parse::LibrettoCompileError;
+    use crate::runtime::LibrettoRuntime;
 
-    use super::LibrettoParsable;
+    use super::{LibrettoParsable, LibrettoEvaluator};
 
     pub fn check_expr<'a, T: LibrettoParsable<'a, LibrettoLogicToken>>(
         source: &'a str,
@@ -134,7 +135,7 @@ pub mod test_util {
         let mut errors = Vec::new();
         let mut types = HashMap::from([
             (String::from("foo"), LsonType::Float),
-            (String::from("bar"), LsonType::String),
+            (String::from("bar"), LsonType::Bool),
         ]);
         let ast = T::checked_parse(&mut queue, &mut errors);
         assert!(ast.is_some());
@@ -146,5 +147,28 @@ pub mod test_util {
         assert_eq!(errors.len(), number_of_errors);
         assert_eq!(static_type, ast_type);
         errors
+    }
+
+    pub fn evaluate_expr<'a, T : LibrettoParsable<'a, LibrettoLogicToken> + LibrettoEvaluator>(
+        source: &'a str,
+        lson : Lson
+    ) {
+        let mut runtime = LibrettoRuntime::with_data([
+            (String::from("foo"), Lson::Float(2.0)),
+            (String::from("bar"), Lson::Bool(true)),
+        ]);
+        let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
+        let mut compile_time_errors = Vec::new();
+        let mut types = HashMap::from([
+            (String::from("foo"), LsonType::Float),
+            (String::from("bar"), LsonType::Bool),
+        ]);
+        let ast = T::checked_parse(&mut queue, &mut compile_time_errors);
+        assert!(ast.is_some());
+        let ast = ast.unwrap();
+        let ast_type = ast.validate(&mut compile_time_errors, &mut types);
+        let result = ast.evaluate(&mut runtime);
+        assert_eq!(ast_type, result.get_type());
+        assert_eq!(result, lson);
     }
 }

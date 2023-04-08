@@ -129,6 +129,24 @@ impl Lson {
     pub fn get_type(&self) -> LsonType {
         self.into()
     }
+
+    pub(crate) fn bang_operation(&mut self) {
+        if let Lson::Bool(mut value) = self {
+            value = !value;
+        }
+    }
+}
+
+impl ops::Not for Lson {
+    type Output = Lson;
+
+    fn not(self) -> Self::Output {
+        if let Lson::Bool(value) = self {
+            Lson::Bool(!value)
+        } else {
+            self
+        }
+    }
 }
 
 impl ToString for LsonType {

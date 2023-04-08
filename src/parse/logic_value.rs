@@ -59,12 +59,8 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
 impl LibrettoEvaluator for LogicValue {
     fn evaluate(&self, runtime: &mut LibrettoRuntime) -> Lson {
         match self {
-            LogicValue::Literal(lson) => {
-                lson.clone()
-            },
-            LogicValue::Variable(ident) => {
-                runtime.get_data(&ident).clone()
-            },
+            LogicValue::Literal(value) => value.clone(),
+            LogicValue::Variable(ident) => runtime.get_data(ident).clone(),
         }
     }
 }
