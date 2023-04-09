@@ -156,5 +156,7 @@ mod tests {
     fn eval_factor_expr() {
         evaluate_expr::<LogicFactorExpr>("false", Lson::Bool(false));
         evaluate_expr::<LogicFactorExpr>("2*2", Lson::Int(4));
+        evaluate_expr::<LogicFactorExpr>("2/2", Lson::Int(1));
+        evaluate_expr::<LogicFactorExpr>("5/2.5", Lson::Float(2.0));
     }
 }
