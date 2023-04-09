@@ -5,10 +5,11 @@
 use std::collections::HashMap;
 
 use crate::lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal};
-use crate::lson::LsonType;
+use crate::lson::{LsonType, Lson};
 use crate::parse_ast;
-use super::LibrettoCompileError;
-use super::logic_factor_expr::LogicFactorExpr;
+use crate::runtime::LibrettoRuntime;
+use super::{LibrettoCompileError, LibrettoEvaluator};
+use super::logic_factor_expr::{LogicFactorExpr};
 use super::{LibrettoParsable};
 
 #[derive(Debug, PartialEq)]
@@ -105,6 +106,20 @@ fn get_term_type(lhs : &LsonType, op : &TermOperator, rhs : &LsonType) -> LsonTy
     }
 }
 
+impl LibrettoEvaluator for LogicTermExpr {
+    fn evaluate(&self, runtime: &mut LibrettoRuntime) -> Lson {
+        let mut v1 = self.lhs.evaluate(runtime);
+        for (op, rhs) in &self.rhs {
+            let v2 = rhs.evaluate(runtime);
+            match op {
+                TermOperator::Plus => v1 = v1 + v2,
+                TermOperator::Minus => v1 = v1 - v2,
+            };
+        }
+        v1
+    }
+}
+
 //==================================================================================================
 //          Additive Expression Tests
 //==================================================================================================
@@ -145,5 +160,14 @@ mod tests {
         validate_expr::<LogicTermExpr>("2 + 2 * 3", 0, LsonType::Int);
         validate_expr::<LogicTermExpr>("2 + foo", 0, LsonType::Float);
         validate_expr::<LogicTermExpr>("false + 3", 1, LsonType::None);
+    }
+
+    #[test]
+    fn eval_term_expr() {
+        evaluate_expr::<LogicTermExpr>("false", Lson::Bool(false));
+        evaluate_expr::<LogicTermExpr>("2*2", Lson::Int(4));
+        evaluate_expr::<LogicTermExpr>("2/2", Lson::Int(1));
+        evaluate_expr::<LogicTermExpr>("5/2.5", Lson::Float(2.0));
+        evaluate_expr::<LogicTermExpr>("2*2+2*2", Lson::Int(8));
     }
 }
