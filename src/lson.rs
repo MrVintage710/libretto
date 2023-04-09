@@ -144,7 +144,82 @@ impl ops::Not for Lson {
         if let Lson::Bool(value) = self {
             Lson::Bool(!value)
         } else {
-            self
+            Lson::None
+        }
+    }
+}
+
+impl ops::Neg for Lson {
+    type Output = Lson;
+
+    fn neg(self) -> Self::Output {
+        match self {
+            Lson::Int(v1) => Lson::Int(-v1),
+            Lson::Float(v1) => Lson::Float(-v1),
+            _ => Lson::None
+        }
+    }
+}
+
+impl ops::Add for Lson {
+    type Output = Lson;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Lson::Int(v1), Lson::Int(v2)) => Lson::Int(v1 + v2),
+            (Lson::Float(v1), Lson::Float(v2)) => Lson::Float(v1 + v2),
+            (Lson::Float(v1), Lson::Int(v2)) => Lson::Float(v1 + v2 as f64),
+            (Lson::Int(v1), Lson::Float(v2)) => Lson::Float(v1 as f64 + v2),
+            (Lson::String(v1), Lson::String(v2)) => Lson::String(format!("{}{}", v1, v2)),
+            (Lson::String(v1), Lson::Int(v2)) => Lson::String(format!("{}{}", v1, v2)),
+            (Lson::String(v1), Lson::Float(v2)) => Lson::String(format!("{}{}", v1, v2)),
+            (Lson::String(v1), Lson::Bool(v2)) => Lson::String(format!("{}{}", v1, v2)),
+            (Lson::Int(v1), Lson::String(v2)) => Lson::String(format!("{}{}", v1, v2)),
+            (Lson::Float(v1), Lson::String(v2)) => Lson::String(format!("{}{}", v1, v2)),
+            (Lson::Bool(v1), Lson::String(v2)) => Lson::String(format!("{}{}", v1, v2)),
+            _ => Lson::None
+        }
+    }
+}
+
+impl ops::Sub for Lson {
+    type Output = Lson;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Lson::Float(v1), Lson::Float(v2)) => Lson::Float(v1 - v2),
+            (Lson::Float(v1), Lson::Int(v2)) => Lson::Float(v1 - v2 as f64),
+            (Lson::Int(v1), Lson::Float(v2)) => Lson::Float(v1 as f64 - v2),
+            (Lson::Int(v1), Lson::Int(v2)) => Lson::Int(v1 - v2),
+            _ => Lson::None
+        }
+    }
+}
+
+impl ops::Mul for Lson {
+    type Output = Lson;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Lson::Float(v1), Lson::Float(v2)) => Lson::Float(v1 * v2),
+            (Lson::Float(v1), Lson::Int(v2)) => Lson::Float(v1 * v2 as f64),
+            (Lson::Int(v1), Lson::Float(v2)) => Lson::Float(v1 as f64 - v2),
+            (Lson::Int(v1), Lson::Int(v2)) => Lson::Int(v1 * v2),
+            _ => Lson::None
+        }
+    }
+}
+
+impl ops::Div for Lson {
+    type Output = Lson;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Lson::Float(v1), Lson::Float(v2)) => Lson::Float(v1 / v2),
+            (Lson::Float(v1), Lson::Int(v2)) => Lson::Float(v1 / v2 as f64),
+            (Lson::Int(v1), Lson::Float(v2)) => Lson::Float(v1 as f64 / v2),
+            (Lson::Int(v1), Lson::Int(v2)) => Lson::Int(v1 / v2),
+            _ => Lson::None
         }
     }
 }

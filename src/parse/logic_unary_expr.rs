@@ -88,7 +88,7 @@ impl LibrettoEvaluator for LogicUnaryExpr {
         let value = self.value.evaluate(runtime);
         if let Some(op) = &self.operator {
             match op {
-                UnaryOperator::Negative => todo!(),
+                UnaryOperator::Negative => -value,
                 UnaryOperator::Bang => !value,
             }
         } else {

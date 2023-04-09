@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use crate::{lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal}, parse_ast};
+use crate::{lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal}, parse_ast, lson::Lson, runtime::LibrettoRuntime};
 use crate::lson::LsonType;
-use super::{logic_unary_expr::LogicUnaryExpr, LibrettoParsable, LibrettoCompileError};
+use super::{logic_unary_expr::LogicUnaryExpr, LibrettoParsable, LibrettoCompileError, LibrettoEvaluator};
 
 //==================================================================================================
 //          Factor Expression
@@ -101,6 +101,20 @@ fn get_factor_type(lhs : &LsonType, op : &FactorOperator, rhs : &LsonType) -> Ls
     }
 }
 
+impl LibrettoEvaluator for LogicFactorExpr {
+    fn evaluate(&self, runtime: &mut LibrettoRuntime) -> Lson {
+        let mut v1 = self.lhs.evaluate(runtime);
+        for (op, rhs) in &self.rhs {
+            let v2 = rhs.evaluate(runtime);
+            match op {
+                FactorOperator::Mult => v1 = v1 * v2,
+                FactorOperator::Div => v1 = v1 / v2,
+            };
+        }
+        v1
+    }
+}
+
 //==================================================================================================
 //          Factor Expression
 //==================================================================================================
@@ -110,7 +124,7 @@ mod tests {
 
     use crate::{
         lson::{Lson, LsonType},
-        parse::{test_util::*, logic_value::LogicValue},
+        parse::test_util::*,
     };
 
     use super::{LogicUnaryExpr, LogicFactorExpr, FactorOperator};
@@ -136,5 +150,11 @@ mod tests {
         validate_expr::<LogicFactorExpr>("!false", 0, LsonType::Bool);
         validate_expr::<LogicFactorExpr>("2 * 2", 0, LsonType::Int);
         validate_expr::<LogicFactorExpr>("false * 3", 1, LsonType::None);
+    }
+
+    #[test]
+    fn eval_factor_expr() {
+        evaluate_expr::<LogicFactorExpr>("false", Lson::Bool(false));
+        evaluate_expr::<LogicFactorExpr>("2*2", Lson::Int(4));
     }
 }
