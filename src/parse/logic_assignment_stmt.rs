@@ -2,22 +2,18 @@ use std::collections::HashMap;
 
 use crate::{lexer::{LibrettoTokenQueue, LibrettoLogicToken, LogicOrdinal}, lson::LsonType};
 
-use super::{logic_equality_expr::LogicEqualityExpr, LibrettoParsable, LibrettoCompileError};
+use super::{logic_equality_expr::LogicEqualityExpr, LibrettoParsable, LibrettoCompileError, logic_expr::LogicExpr};
 
 pub struct LogicAssignmentStatement {
     identifier: String,
-    value : LogicEqualityExpr
+    value : LogicExpr
 }
 
 impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAssignmentStatement {
     fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
-        let mut qualifier = queue.next_is(LogicOrdinal::Identifier) &&
-                            queue.next_is(LogicOrdinal::Equals) &&
-                            LogicEqualityExpr::raw_check(queue);
-        if qualifier && queue.next_is(LogicOrdinal::Question) {
-            qualifier &= LogicEqualityExpr::raw_check(queue);
-        }
-        qualifier
+        queue.next_is(LogicOrdinal::Identifier) &&
+        queue.next_is(LogicOrdinal::Equals) &&
+        LogicExpr::raw_check(queue)
     }
 
     fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {

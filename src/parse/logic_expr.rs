@@ -74,7 +74,7 @@ mod tests {
     #[test]
     fn validate_logic_expr() {
         validate_expr::<LogicExpr>("10 < 15 ? false", 0, LsonType::Bool);
-        validate_expr::<LogicExpr>("\"test\" ? true", 1, LsonType::String)
+        validate_expr::<LogicExpr>("\"test\" ? true", 1, LsonType::String);
     }
 }
 
