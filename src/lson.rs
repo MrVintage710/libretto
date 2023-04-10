@@ -6,7 +6,7 @@ use std::{
     collections::HashMap,
     fmt::{Debug, Display},
     ops::{self},
-    rc::Rc,
+    rc::Rc, cmp,
 };
 
 pub type LibrettoFunction = Rc<dyn Fn(Vec<Lson>, &mut LibrettoRuntime) -> Lson>;
@@ -129,12 +129,6 @@ impl Lson {
     pub fn get_type(&self) -> LsonType {
         self.into()
     }
-
-    pub(crate) fn bang_operation(&mut self) {
-        if let Lson::Bool(mut value) = self {
-            value = !value;
-        }
-    }
 }
 
 impl ops::Not for Lson {
@@ -224,6 +218,37 @@ impl ops::Div for Lson {
     }
 }
 
+impl PartialEq for Lson {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Int(l0), Self::Int(r0)) => l0 == r0,
+            (Self::Float(l0), Self::Float(r0)) => l0 == r0,
+            (Self::Float(l0), Self::Int(r0)) => *l0 == *r0 as f64,
+            (Self::Int(l0), Self::Float(r0)) => *l0 as f64 == *r0,
+            (Self::String(l0), Self::String(r0)) => l0 == r0,
+            (Self::Bool(l0), Self::Bool(r0)) => l0 == r0,
+            (Self::Array(l0), Self::Array(r0)) => l0 == r0,
+            (Self::Struct(l0), Self::Struct(r0)) => l0 == r0,
+            (Self::Function(l0, l1), Self::Function(r0, r1)) => false,
+            _ => core::mem::discriminant(self) == core::mem::discriminant(other),
+        }
+    }
+}
+
+impl PartialOrd for Lson {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        match (self, other) {
+            (Lson::Float(v1), Lson::Float(v2)) => v1.partial_cmp(v2),
+            (Lson::Float(v1), Lson::Int(v2)) => v1.partial_cmp(&(*v2 as f64)),
+            (Lson::Int(v1), Lson::Float(v2)) => v1.partial_cmp(&(*v2 as i64)),
+            (Lson::Int(v1), Lson::Int(v2)) => v1.partial_cmp(v2),
+            (Lson::Bool(v1), Lson::Bool(v2)) => v1.partial_cmp(v2),
+            (Lson::String(v1), Lson::String(v2)) => v1.partial_cmp(v2),
+            _ => Some(cmp::Ordering::Equal)
+        }
+    }
+}
+
 impl ToString for LsonType {
     fn to_string(&self) -> String {
         match self {
@@ -284,6 +309,8 @@ impl LsonType {
 
     pub fn get_comparison_type(&self, other : LsonType) -> LsonType {
         match (self, other) {
+            (LsonType::Float, LsonType::Float) |
+            (LsonType::Int, LsonType::Int) |
             (LsonType::Int, LsonType::Float) |
             (LsonType::Float, LsonType::Int) => LsonType::Bool,
             _ => LsonType::None
@@ -497,21 +524,6 @@ impl Debug for Lson {
             Self::Array(arg0) => f.debug_tuple("Array").field(arg0).finish(),
             Self::Struct(arg0) => f.debug_tuple("Struct").field(arg0).finish(),
             Self::Function(arg0, arg1) => f.write_str(format!("Function() -> {}", arg1.to_string()).as_str()),
-        }
-    }
-}
-
-impl PartialEq for Lson {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Int(l0), Self::Int(r0)) => l0 == r0,
-            (Self::Float(l0), Self::Float(r0)) => l0 == r0,
-            (Self::String(l0), Self::String(r0)) => l0 == r0,
-            (Self::Bool(l0), Self::Bool(r0)) => l0 == r0,
-            (Self::Array(l0), Self::Array(r0)) => l0 == r0,
-            (Self::Struct(l0), Self::Struct(r0)) => l0 == r0,
-            (Self::Function(l0, l1), Self::Function(r0, r1)) => false,
-            _ => core::mem::discriminant(self) == core::mem::discriminant(other),
         }
     }
 }

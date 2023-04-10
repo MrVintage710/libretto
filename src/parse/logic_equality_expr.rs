@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
 use crate::lexer::{LibrettoLogicToken, LogicOrdinal };
-use crate::lson::{LsonType};
-use super::LibrettoCompileError;
+use crate::lson::{LsonType, Lson};
+use crate::runtime::LibrettoRuntime;
+use super::{LibrettoCompileError, LibrettoEvaluator};
 use super::logic_comparison_expr::LogicComparisonExpr;
 use super::{logic_term_expr::LogicTermExpr, LibrettoParsable};
 
@@ -62,36 +63,46 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicEqualityExpr {
     }
 
     fn validate(&self, errors: &mut Vec<LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> LsonType {
-        let lhs = self.lhs.validate(errors, type_map);
+        let mut lhs_type = self.lhs.validate(errors, type_map);
 
-        if let Some((op, rhs)) = self.rhs.first() {
-            let rhs = rhs.validate(errors, type_map);
-            let expected_type = get_equality_type(&lhs, op, &rhs);
-
-            if expected_type == LsonType::None {
-                errors.push(LibrettoCompileError::InvalidOperationError(lhs.to_string(), op.to_string(), rhs.to_string()));
-                return LsonType::None;
-            }
-
-            for i in 1..self.rhs.len() {
-                let (inner_op, inner)= &self.rhs[i];
-                let inner_type = inner.validate(errors, type_map);
-                let op_type = get_equality_type(&expected_type, inner_op, &inner_type);
-                if op_type == LsonType::None{
-                    errors.push(LibrettoCompileError::InvalidOperationError(expected_type.to_string(), op.to_string(), inner_type.to_string()));
-                    return LsonType::None;
+        if !self.rhs.is_empty() {
+            for (op, rhs) in &self.rhs {
+                let rhs_type = rhs.validate(errors, type_map);
+                if let LsonType::None = lhs_type.get_comparison_type(rhs_type) {
+                    errors.push(LibrettoCompileError::InvalidOperationError(lhs_type.to_string(), op.to_string(), rhs_type.to_string()));
+                    return LsonType::None
                 }
+                lhs_type = rhs_type;
             }
-
-            expected_type
+            LsonType::Bool
         } else {
-            lhs
+            lhs_type
         }
     }
 }
 
 fn get_equality_type(lhs : &LsonType, op : &EqualityOperator, rhs : &LsonType) -> LsonType {
     lhs.get_equality_type(*rhs)
+}
+
+impl LibrettoEvaluator for LogicEqualityExpr {
+    fn evaluate(&self, runtime: &mut LibrettoRuntime) -> Lson {
+        let mut cardnality = true;
+        let mut v1 = self.lhs.evaluate(runtime);
+        if !self.rhs.is_empty() {
+            for (op, rhs) in &self.rhs {
+                let v2 = rhs.evaluate(runtime);
+                match op {
+                    EqualityOperator::EqualTo => if !(v1 == v2) { cardnality = false },
+                    EqualityOperator::NotEqualTo => if !(v1 != v2) { cardnality = false }
+                };
+                v1 = v2;
+            }
+            Lson::Bool(cardnality)
+        } else {
+            v1
+        }
+    }
 }
 
 //==================================================================================================
@@ -125,5 +136,16 @@ mod tests {
     fn validate_equality_expr() {
         validate_expr::<LogicEqualityExpr>("!false", 0, LsonType::Bool);
         validate_expr::<LogicEqualityExpr>("2 * 2", 0, LsonType::Int);
+    }
+
+    #[test]
+    fn eval_term_expr() {
+        evaluate_expr::<LogicComparisonExpr>("false", Lson::Bool(false));
+        evaluate_expr::<LogicComparisonExpr>("2*2", Lson::Int(4));
+        evaluate_expr::<LogicComparisonExpr>("2/2", Lson::Int(1));
+        evaluate_expr::<LogicComparisonExpr>("5/2.5", Lson::Float(2.0));
+        evaluate_expr::<LogicComparisonExpr>("2*2+2*2", Lson::Int(8));
+        evaluate_expr::<LogicComparisonExpr>("10 < 15 < 20 > 15 > 10", Lson::Bool(true));
+        evaluate_expr::<LogicComparisonExpr>("true != false", Lson::Bool(true));
     }
 }
