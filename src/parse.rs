@@ -1,5 +1,7 @@
-mod logic_let;
+mod logic_let_stmt;
+mod logic_assignment_stmt;
 mod logic_value;
+mod logic_expr;
 mod logic_unary_expr;
 mod logic_term_expr;
 mod logic_factor_expr;
@@ -77,6 +79,8 @@ pub enum LibrettoCompileError {
     #[error("When parsing '{0}', the pre parse check passed event though the pattern doesn't match.")]
     ParseCheckNotThoroughError(String),
 
+    #[error("When parsing an expression with type {0}, there was a default supplied with type {1}. These types must be the same.")]
+    ExprDefaultTypeMissmatch(String, String),
 }
 
 #[macro_export]
