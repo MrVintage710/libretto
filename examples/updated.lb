@@ -1,0 +1,27 @@
+{
+    request player;
+    request quest_manager;
+
+    let quest = quest_manager.getQuest("Ballad of the Bard");
+
+    enum MajorQuestFlag {
+        
+    }
+    
+    function honorific() {
+        return player.is_female ? "Miss" : "Sir";
+    }
+}
+
+--Start--
+{if quest.access_granted} Soldier: Hello {player.name}. Welcome back and enjoy your time at the Rose Keep.
+{else} Soldier: Hold There. What is your name?
+
+    -> {player.name}.
+    Soldier: Hmm, I do not recognize your face or name, friend. Allow me to check my list.
+    {if quest.list_flag} Soldier: Thank you for your patience. You are on the list. Enjoy your night, {honorific()}. {quest.access_granted = true} 
+    {else} Soldier: You do not appear to be on the list. Please step out of line.
+    
+    -> What does it matter? I am late for a serving shift. I gotta get in before I lose my job!
+    {}
+---
