@@ -255,91 +255,7 @@ impl PartialOrd for Lson {
     }
 }
 
-impl ToString for LsonType {
-    fn to_string(&self) -> String {
-        match self {
-            LsonType::None => String::from("none"),
-            LsonType::Int => String::from("int"),
-            LsonType::Float => String::from("float"),
-            LsonType::String => String::from("string"),
-            LsonType::Bool => String::from("bool"),
-            LsonType::Array => String::from("array"),
-            LsonType::Struct => String::from("struct"),
-            LsonType::Function => String::from("function"),
-        }
-    }
-}
-
-impl LsonType {
-    pub fn get_sum_type(&self, other : LsonType) -> LsonType {
-        match (self, other) {
-            (LsonType::Float, LsonType::Float) | 
-            (LsonType::Float, LsonType::Int) |
-            (LsonType::Int, LsonType::Float) => LsonType::Float,
-            (_, LsonType::String) |
-            (LsonType::String, _) => LsonType::String,
-            (LsonType::Int, LsonType::Int) => LsonType::Int,
-            _ => LsonType::None
-        }
-    }
-
-    pub fn get_difference_type(&self, other : LsonType) -> LsonType {
-        match (self, other) {
-            (LsonType::Float, LsonType::Float) | 
-            (LsonType::Float, LsonType::Int) |
-            (LsonType::Int, LsonType::Float) => LsonType::Float,
-            (LsonType::Int, LsonType::Int) => LsonType::Int,
-            _ => LsonType::None
-        }
-    }
-
-    pub fn get_product_type(&self, other : LsonType) -> LsonType {
-        match (self, other) {
-            (LsonType::Float, LsonType::Float) | 
-            (LsonType::Float, LsonType::Int) |
-            (LsonType::Int, LsonType::Float) => LsonType::Float,
-            (LsonType::Int, LsonType::Int) => LsonType::Int,
-            _ => LsonType::None
-        }
-    }
-
-    pub fn get_quotient_type(&self, other : LsonType) -> LsonType {
-        match (self, other) {
-            (LsonType::Float, LsonType::Float) | 
-            (LsonType::Float, LsonType::Int) |
-            (LsonType::Int, LsonType::Float) => LsonType::Float,
-            (LsonType::Int, LsonType::Int) => LsonType::Int,
-            _ => LsonType::None
-        }
-    }
-
-    pub fn get_comparison_type(&self, other : LsonType) -> LsonType {
-        match (self, other) {
-            (LsonType::Float, LsonType::Float) |
-            (LsonType::Int, LsonType::Int) |
-            (LsonType::Int, LsonType::Float) |
-            (LsonType::Float, LsonType::Int) => LsonType::Bool,
-            _ => LsonType::None
-        }
-    }
-
-    pub fn get_equality_type(&self, other : LsonType) -> LsonType {
-        match (self, other) {
-            (LsonType::Int, LsonType::Float) |
-            (LsonType::Float, LsonType::Int) |
-            (LsonType::Int, LsonType::Int) |
-            (LsonType::Float, LsonType::Float) |
-            (LsonType::String, LsonType::String) |
-            (LsonType::Bool, LsonType::Bool) |
-            (LsonType::Array, LsonType::Array) |
-            (LsonType::Struct, LsonType::Struct) |
-            (LsonType::Function, LsonType::Function) => LsonType::Bool,
-            _ => LsonType::None
-        }
-    }
-}
-
-impl From<i64> for Lson {
+ impl From<i64> for Lson {
     fn from(value: i64) -> Self {
         Lson::Int(value)
     }
@@ -530,6 +446,100 @@ impl Debug for Lson {
             Self::Array(arg0) => f.debug_tuple("Array").field(arg0).finish(),
             Self::Struct(arg0) => f.debug_tuple("Struct").field(arg0).finish(),
             Self::Function(arg0, arg1) => f.write_str(format!("Function() -> {}", arg1.to_string()).as_str()),
+        }
+    }
+}
+
+//================================================================================================
+//          Lson Type
+//================================================================================================
+
+impl LsonType {
+    pub fn get_sum_type(&self, other : LsonType) -> LsonType {
+        match (self, other) {
+            (LsonType::Float, LsonType::Float) |
+            (LsonType::Float, LsonType::Int) |
+            (LsonType::Int, LsonType::Float) => LsonType::Float,
+            (_, LsonType::String) |
+            (LsonType::String, _) => LsonType::String,
+            (LsonType::Int, LsonType::Int) => LsonType::Int,
+            _ => LsonType::None
+        }
+    }
+
+    pub fn get_difference_type(&self, other : LsonType) -> LsonType {
+        match (self, other) {
+            (LsonType::Float, LsonType::Float) |
+            (LsonType::Float, LsonType::Int) |
+            (LsonType::Int, LsonType::Float) => LsonType::Float,
+            (LsonType::Int, LsonType::Int) => LsonType::Int,
+            _ => LsonType::None
+        }
+    }
+
+    pub fn get_product_type(&self, other : LsonType) -> LsonType {
+        match (self, other) {
+            (LsonType::Float, LsonType::Float) |
+            (LsonType::Float, LsonType::Int) |
+            (LsonType::Int, LsonType::Float) => LsonType::Float,
+            (LsonType::Int, LsonType::Int) => LsonType::Int,
+            _ => LsonType::None
+        }
+    }
+
+    pub fn get_quotient_type(&self, other : LsonType) -> LsonType {
+        match (self, other) {
+            (LsonType::Float, LsonType::Float) |
+            (LsonType::Float, LsonType::Int) |
+            (LsonType::Int, LsonType::Float) => LsonType::Float,
+            (LsonType::Int, LsonType::Int) => LsonType::Int,
+            _ => LsonType::None
+        }
+    }
+
+    pub fn get_comparison_type(&self, other : LsonType) -> LsonType {
+        match (self, other) {
+            (LsonType::Float, LsonType::Float) |
+            (LsonType::Int, LsonType::Int) |
+            (LsonType::Int, LsonType::Float) |
+            (LsonType::Float, LsonType::Int) => LsonType::Bool,
+            _ => LsonType::None
+        }
+    }
+
+    pub fn get_equality_type(&self, other : LsonType) -> LsonType {
+        match (self, other) {
+            (LsonType::Int, LsonType::Float) |
+            (LsonType::Float, LsonType::Int) |
+            (LsonType::Int, LsonType::Int) |
+            (LsonType::Float, LsonType::Float) |
+            (LsonType::String, LsonType::String) |
+            (LsonType::Bool, LsonType::Bool) |
+            (LsonType::Array, LsonType::Array) |
+            (LsonType::Struct, LsonType::Struct) |
+            (LsonType::Function, LsonType::Function) => LsonType::Bool,
+            _ => LsonType::None
+        }
+    }
+}
+
+impl Default for LsonType {
+    fn default() -> Self {
+        LsonType::None
+    }
+}
+
+impl ToString for LsonType {
+    fn to_string(&self) -> String {
+        match self {
+            LsonType::None => String::from("none"),
+            LsonType::Int => String::from("int"),
+            LsonType::Float => String::from("float"),
+            LsonType::String => String::from("string"),
+            LsonType::Bool => String::from("bool"),
+            LsonType::Array => String::from("array"),
+            LsonType::Struct => String::from("struct"),
+            LsonType::Function => String::from("function"),
         }
     }
 }
