@@ -24,6 +24,12 @@ pub enum Lson {
     Function(LibrettoFunction, LsonType),
 }
 
+impl Default for Lson {
+    fn default() -> Self {
+        Lson::None
+    }
+}
+
 impl Lson {
     pub fn is_i64(&self) -> bool {
         if let Lson::Int(_) = self {

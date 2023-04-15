@@ -93,7 +93,8 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
             LogicOrdinal::StringLiteral,
             LogicOrdinal::BoolLiteral,
             LogicOrdinal::FloatLiteral,
-            LogicOrdinal::IntLiteral
+            LogicOrdinal::IntLiteral,
+            LogicOrdinal::NoneLiteral
         ]) {
             true
         } else {
@@ -143,6 +144,9 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
                     LibrettoLogicToken::IntLiteral(value) => {
                         Some(Lson::Int(value))
                     }
+                    LibrettoLogicToken::NoneLiteral => {
+                        Some(Lson::None)
+                    }
                     _ => None,
                 }
             }
@@ -153,7 +157,6 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
 
     fn validate(&self, errors: &mut Vec<LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> LsonType {
         match self {
-            Lson::None => errors.push(LibrettoCompileError::NullValueError),
             Lson::Array(values) => {
                 for i in values.iter() {
                     i.validate(errors, type_map);
@@ -212,14 +215,16 @@ mod tests {
     #[test]
     fn check_lson() {
         check_expr::<Lson>("3", 1);
+        check_expr::<Lson>("none", 1);
         check_expr::<Lson>("[true, false]", 5);
         check_expr::<Lson>("{ key : false, test : false }", 9);
-        // check_expr("3.14");
-        // check_expr("\"Hello World\"");
     }
 
     #[test]
     fn parse_lson() {
+        let ast = parse_expr::<Lson>("none");
+        assert_eq!(ast, Lson::None);
+
         let ast = parse_expr::<Lson>("{obj : {key : \"value\"}}");
         assert_eq!(ast, Lson::Struct(HashMap::from([("obj".to_string(), Lson::Struct(HashMap::from([("key".to_string(), "value".into())])))])));
 
@@ -230,6 +235,7 @@ mod tests {
     #[test]
     fn validate_lson() {
         validate_expr::<Lson>("3", 0, LsonType::Int);
+        validate_expr::<Lson>("none", 0, LsonType::None);
         validate_expr::<Lson>("[true, false]", 0, LsonType::Array);
         // check_expr("3.14");
         // check_expr("\"Hello World\"");

@@ -2,12 +2,13 @@ mod event;
 pub mod function;
 
 use crate::lson::Lson;
+use crate::scope::LibrettoScope;
 use std::collections::HashMap;
 
 use self::{event::LibrettoEventListener};
 
 pub struct LibrettoRuntime {
-    current_scope: LibrettoScope,
+    current_scope: LibrettoScope<Lson>,
     event_listeners: Vec<Box<dyn LibrettoEventListener>>,
 }
 
@@ -47,37 +48,6 @@ impl LibrettoRuntime {
 
     pub fn insert_data(&mut self, ident : &str, value : Lson) {
         self.current_scope.data.insert(ident.to_string(), value);
-    }
-}
-
-pub struct LibrettoScope {
-    data : HashMap<String, Lson>,
-    parrent : Option<Box<LibrettoScope>>
-}
-
-impl LibrettoScope {
-    pub fn new(data : impl Into<HashMap<String, Lson>> ) -> Self {
-        LibrettoScope { data: data.into(), parrent: None }
-    }
-
-    pub fn get_data(&self, ident : &str) -> Lson {
-        if self.data.contains_key(ident) {
-            return self.data.get(ident).unwrap().clone();
-        }
-
-        if self.parrent.is_some() {
-            return self.parrent.as_ref().unwrap().get_data(ident);
-        }
-
-        Lson::None
-    }
-
-    pub fn depth(&self) -> u32 {
-        if let Some(parrent) = &self.parrent {
-            parrent.depth() + 1
-        } else {
-            1
-        }
     }
 }
 

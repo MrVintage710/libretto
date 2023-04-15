@@ -368,6 +368,9 @@ pub enum LibrettoLogicToken {
     #[regex("(true|false)", lex_bool, priority=4)]
     BoolLiteral(bool),
 
+    #[token("none", priority = 4)]
+    NoneLiteral,
+
     #[regex("(float|int|string|bool|struct|array|function)", lex_type, priority=4)]
     Type(LsonType),
 
