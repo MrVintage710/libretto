@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use crate::{lson::{Lson, LsonType}, lexer::{LibrettoLogicToken, LogicOrdinal, LibrettoTokenQueue}, parse_ast, parse::LibrettoCompileError::ExprDefaultTypeMissmatch};
-use super::{logic_equality_expr::LogicEqualityExpr, LibrettoParsable, LibrettoCompileError, LibrettoEvaluator};
+use crate::{lson::{Lson, LsonType}, lexer::{LibrettoLogicToken, LogicOrdinal, LibrettoTokenQueue}, parse_ast, compiler::{LibrettoCompiletime, LibrettoCompileError}};
+use super::{logic_equality_expr::LogicEqualityExpr, LibrettoParsable, LibrettoEvaluator};
 
 pub struct LogicExpr {
     expr : LogicEqualityExpr,
@@ -17,22 +17,22 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicExpr {
         check
     }
 
-    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
-        let expr = parse_ast!(LogicEqualityExpr, queue, errors);
+    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, compile_time : &mut LibrettoCompiletime) -> Option<Self> {
+        let expr = parse_ast!(LogicEqualityExpr, queue, compile_time);
         let default = if let Some(_) = queue.pop_if_next_is(LogicOrdinal::Question) {
-            Some(parse_ast!(Lson, queue, errors))
+            Some(parse_ast!(Lson, queue, compile_time))
         } else {
             None
         };
         Some(LogicExpr{expr, default})
     }
 
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> LsonType {
-        let expected_type = self.expr.validate(errors, type_map);
+    fn validate(&self, compile_time : &mut LibrettoCompiletime) -> LsonType {
+        let expected_type = self.expr.validate(compile_time);
         if let Some(lson) = &self.default {
-            let default_type = lson.validate(errors, type_map);
+            let default_type = lson.validate(compile_time);
             if expected_type != default_type {
-                errors.push(ExprDefaultTypeMissmatch(expected_type.to_string(), default_type.to_string()))
+                compile_time.push_error(LibrettoCompileError::ExprDefaultTypeMissmatch(expected_type.to_string(), default_type.to_string()))
             }
         };
         expected_type
@@ -89,13 +89,13 @@ mod tests {
     #[test]
     fn validate_logic_expr() {
         validate_expr::<LogicExpr>("10 < 15 ? false", 0, LsonType::Bool);
-        validate_expr::<LogicExpr>("test ? true", 1, LsonType::String);
+        validate_expr::<LogicExpr>("\"test\" ? true", 1, LsonType::String);
     }
 
     #[test]
     fn eval_logic_expr() {
         evaluate_expr::<LogicExpr>("10 < 15 ? false", Lson::Bool(true));
-        evaluate_expr::<LogicExpr>("test ? true", Lson::Bool(true));
+        evaluate_expr::<LogicExpr>("bar ? true", Lson::Bool(true));
     }
 }
 

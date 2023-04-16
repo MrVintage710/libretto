@@ -1,11 +1,11 @@
-use super::{LibrettoParsable, LibrettoCompileError};
+use super::LibrettoParsable;
 use crate::{
     lexer::{LibrettoLogicToken, LogicOrdinal, Ordinal, LibrettoTokenQueue},
-    lson::{LsonType, Lson},
-    parse_ast,
+    lson::LsonType,
+    parse_ast, compiler::LibrettoCompiletime,
 };
 use logos::Logos;
-use std::{fmt::Debug, marker::PhantomData, collections::HashMap};
+use std::{fmt::Debug, marker::PhantomData};
 
 //==================================================================================================
 //          Key Value Pair
@@ -58,11 +58,11 @@ where
         true
     }
 
-    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
+    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, compile_time : &mut LibrettoCompiletime) -> Option<Self> {
         queue.reset();
         let ident = queue.pop_if_next_is(LogicOrdinal::Identifier).unwrap();
         queue.pop_if_next_is(LogicOrdinal::Colon);
-        let value = parse_ast!(P, queue, errors);
+        let value = parse_ast!(P, queue, compile_time);
 
         if let LibrettoLogicToken::Identifier(key) = ident {
             Some(KeyValuePair { key, value, _phantom: &PhantomData })
@@ -71,8 +71,8 @@ where
         }
     }
 
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> LsonType {
-        self.value.validate(errors, type_map)
+    fn validate(&self, compile_time : &mut LibrettoCompiletime) -> LsonType {
+        self.value.validate(compile_time)
     }
 }
 
@@ -135,16 +135,16 @@ where
 
     fn parse(
         queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>,
-        errors: &mut Vec<super::LibrettoCompileError>,
+        compile_time : &mut LibrettoCompiletime,
     ) -> Option<Self> {
         let mut values = Vec::new();
 
         queue.reset();
-        values.push(parse_ast!(P, queue, errors));
+        values.push(parse_ast!(P, queue, compile_time));
         loop {
             if queue.next_is(LogicOrdinal::Comma) && P::raw_check(queue) {
                 queue.pop();
-                values.push(parse_ast!(P, queue, errors))
+                values.push(parse_ast!(P, queue, compile_time))
             } else {
                 break;
             }
@@ -160,14 +160,14 @@ where
         }
     }
 
-    fn validate(&self, errors: &mut Vec<super::LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> LsonType{
+    fn validate(&self, compile_time : &mut LibrettoCompiletime) -> LsonType{
         if self.values.is_empty() {return LsonType::None;}
-        let expected_type = self.values.first().unwrap().validate(errors, type_map);
+        let expected_type = self.values.first().unwrap().validate(compile_time);
         let mut return_expected = true;
         
         for i in 1..self.values.len() {
             let element = &self.values[i];
-            return_expected = element.validate(errors, type_map) == expected_type;  
+            return_expected = element.validate(compile_time) == expected_type;
         }
 
         if return_expected {
@@ -185,13 +185,12 @@ where
 #[cfg(test)]
 pub mod tests {
     use crate::{
-        lexer::{LibrettoLogicToken, LibrettoTokenQueue},
+        lexer::LibrettoLogicToken,
         lson::Lson,
         parse::{
-            util::CommaSeparatedList, LibrettoParsable, test_util::*
+            util::CommaSeparatedList, test_util::*
         },
     };
-    use logos::Logos;
     use super::*;
 
     #[test]

@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
-use crate::lexer::{LibrettoLogicToken, LogicOrdinal };
+use crate::compiler::{LibrettoCompiletime, LibrettoCompileError};
+use crate::lexer::{LibrettoLogicToken, LogicOrdinal, LibrettoTokenQueue };
 use crate::lson::{LsonType, Lson};
 use crate::runtime::LibrettoRuntime;
-use super::{LibrettoCompileError, LibrettoEvaluator};
+use super::{LibrettoEvaluator};
 use super::logic_comparison_expr::LogicComparisonExpr;
 use super::{logic_term_expr::LogicTermExpr, LibrettoParsable};
 
@@ -29,14 +30,14 @@ impl ToString for EqualityOperator {
 }
 
 impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicEqualityExpr {
-    fn raw_check(queue: &mut crate::lexer::LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
+    fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
         if !LogicComparisonExpr::raw_check(queue) {return false}
         while queue.next_is([LogicOrdinal::Equality, LogicOrdinal::InverseEquality]) && LogicComparisonExpr::raw_check(queue) {}
         true
     }
 
-    fn parse(queue: &mut crate::lexer::LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
-        let lhs = LogicComparisonExpr::parse(queue, errors).unwrap();
+    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, compile_time : &mut LibrettoCompiletime) -> Option<Self> {
+        let lhs = LogicComparisonExpr::parse(queue, compile_time).unwrap();
         let mut rhs = Vec::new();
 
         loop {
@@ -50,7 +51,7 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicEqualityExpr {
                         _ => EqualityOperator::NotEqualTo
                     }
                 };
-                let value = LogicComparisonExpr::parse(queue, errors);
+                let value = LogicComparisonExpr::parse(queue, compile_time);
                 if value.is_some() {
                     rhs.push((operator, value.unwrap()));
                 }
@@ -62,14 +63,14 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicEqualityExpr {
         Some(LogicEqualityExpr { lhs, rhs })
     }
 
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> LsonType {
-        let mut lhs_type = self.lhs.validate(errors, type_map);
+    fn validate(&self, compile_time : &mut LibrettoCompiletime) -> LsonType {
+        let mut lhs_type = self.lhs.validate(compile_time);
 
         if !self.rhs.is_empty() {
             for (op, rhs) in &self.rhs {
-                let rhs_type = rhs.validate(errors, type_map);
+                let rhs_type = rhs.validate(compile_time);
                 if let LsonType::None = lhs_type.get_comparison_type(rhs_type) {
-                    errors.push(LibrettoCompileError::InvalidOperationError(lhs_type.to_string(), op.to_string(), rhs_type.to_string()));
+                    compile_time.push_error(LibrettoCompileError::InvalidOperationError(lhs_type.to_string(), op.to_string(), rhs_type.to_string()));
                     return LsonType::None
                 }
                 lhs_type = rhs_type;

@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use crate::{lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal}, parse_ast, lson::Lson, runtime::LibrettoRuntime};
+use crate::{lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal}, parse_ast, lson::Lson, runtime::LibrettoRuntime, compiler::{LibrettoCompiletime, LibrettoCompileError}};
 use crate::lson::LsonType;
-use super::{logic_value::LogicValue, LibrettoParsable, LibrettoCompileError, LibrettoEvaluator};
+use super::{logic_value::LogicValue, LibrettoParsable, LibrettoEvaluator};
 
 //==================================================================================================
 //          Logic Unary Expression
@@ -30,7 +30,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
         }
     }
 
-    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
+    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, compile_time : &mut LibrettoCompiletime) -> Option<Self> {
         let operator = queue.pop_if_next_is([LogicOrdinal::Bang, LogicOrdinal::Sub]);
         let operator = if let Some(token) = operator {
             match token {
@@ -41,7 +41,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
         } else {
             None
         };
-        let value = parse_ast!(LogicValue, queue, errors);
+        let value = parse_ast!(LogicValue, queue, compile_time);
 
         Some(LogicUnaryExpr {
             operator,
@@ -49,31 +49,31 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
         })
     }
 
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> LsonType {
-        let lson_type = self.value.validate(errors, type_map);
+    fn validate(&self, compile_time : &mut LibrettoCompiletime) -> LsonType {
+        let lson_type = self.value.validate(compile_time);
 
         if let Some(op) = &self.operator {
             match op {
                 UnaryOperator::Negative => {
                     match lson_type {
-                        LsonType::None => errors.push(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "null".to_string())),
-                        LsonType::String => errors.push(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "string".to_string())),
-                        LsonType::Bool => errors.push(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "bool".to_string())),
-                        LsonType::Array => errors.push(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "array".to_string())),
-                        LsonType::Struct => errors.push(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "struct".to_string())),
-                        LsonType::Function => errors.push(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "function".to_string())),
+                        LsonType::None => compile_time.push_error(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "null".to_string())),
+                        LsonType::String => compile_time.push_error(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "string".to_string())),
+                        LsonType::Bool => compile_time.push_error(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "bool".to_string())),
+                        LsonType::Array => compile_time.push_error(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "array".to_string())),
+                        LsonType::Struct => compile_time.push_error(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "struct".to_string())),
+                        LsonType::Function => compile_time.push_error(LibrettoCompileError::OperationNotSupportedError("-".to_string(), "function".to_string())),
                         _ => {}
                     }
                 },
                 UnaryOperator::Bang => {
                     match lson_type {
-                        LsonType::None => errors.push(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "null".to_string())),
-                        LsonType::Int => errors.push(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "int".to_string())),
-                        LsonType::Float => errors.push(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "float".to_string())),
-                        LsonType::String => errors.push(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "string".to_string())),
-                        LsonType::Array => errors.push(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "array".to_string())),
-                        LsonType::Struct => errors.push(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "struct".to_string())),
-                        LsonType::Function => errors.push(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "function".to_string())),
+                        LsonType::None => compile_time.push_error(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "null".to_string())),
+                        LsonType::Int => compile_time.push_error(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "int".to_string())),
+                        LsonType::Float => compile_time.push_error(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "float".to_string())),
+                        LsonType::String => compile_time.push_error(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "string".to_string())),
+                        LsonType::Array => compile_time.push_error(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "array".to_string())),
+                        LsonType::Struct => compile_time.push_error(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "struct".to_string())),
+                        LsonType::Function => compile_time.push_error(LibrettoCompileError::OperationNotSupportedError("!".to_string(), "function".to_string())),
                         _ => {}
                     }
                 },

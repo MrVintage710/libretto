@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use crate::{lexer::{LibrettoTokenQueue, LibrettoLogicToken, LogicOrdinal}, lson::LsonType, parse_ast};
+use crate::{lexer::{LibrettoTokenQueue, LibrettoLogicToken, LogicOrdinal}, lson::LsonType, parse_ast, compiler::{LibrettoCompileError, LibrettoCompiletime}};
 
-use super::{logic_equality_expr::LogicEqualityExpr, LibrettoParsable, LibrettoCompileError, logic_expr::LogicExpr};
+use super::{logic_equality_expr::LogicEqualityExpr, LibrettoParsable, logic_expr::LogicExpr};
 
 pub struct LogicAssignmentStatement {
     ident: String,
@@ -16,18 +16,18 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAssignmentStatement 
         LogicExpr::raw_check(queue)
     }
 
-    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
+    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, compile_time : &mut LibrettoCompiletime) -> Option<Self> {
         let ident = if let Some(LibrettoLogicToken::Identifier(ident)) = queue.pop() {
             ident
         } else {
             return None
         };
         queue.pop();
-        let value = parse_ast!(LogicExpr, queue, errors);
+        let value = parse_ast!(LogicExpr, queue, compile_time);
         Some(LogicAssignmentStatement{ident, value})
     }
 
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> LsonType {
+    fn validate(&self, compile_time : &mut LibrettoCompiletime) -> LsonType {
         todo!()
     }
 }

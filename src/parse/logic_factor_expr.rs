@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use crate::{lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal}, parse_ast, lson::Lson, runtime::LibrettoRuntime};
+use crate::{lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal}, parse_ast, lson::Lson, runtime::LibrettoRuntime, compiler::{LibrettoCompiletime, LibrettoCompileError}};
 use crate::lson::LsonType;
-use super::{logic_unary_expr::LogicUnaryExpr, LibrettoParsable, LibrettoCompileError, LibrettoEvaluator};
+use super::{logic_unary_expr::LogicUnaryExpr, LibrettoParsable, LibrettoEvaluator};
 
 //==================================================================================================
 //          Factor Expression
@@ -38,8 +38,8 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicFactorExpr {
         true
     }
 
-    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
-        let lhs = parse_ast!(LogicUnaryExpr, queue, errors);
+    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, compile_time : &mut LibrettoCompiletime) -> Option<Self> {
+        let lhs = parse_ast!(LogicUnaryExpr, queue, compile_time);
         let mut rhs = Vec::new();
 
         loop {
@@ -53,7 +53,7 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicFactorExpr {
                         FactorOperator::Mult
                     }
                 };
-                let value = LogicUnaryExpr::parse(queue, errors);
+                let value = LogicUnaryExpr::parse(queue, compile_time);
                 if value.is_some() {
                     rhs.push((operator, value.unwrap()));
                 }
@@ -65,24 +65,24 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicFactorExpr {
         Some(LogicFactorExpr { lhs, rhs })
     }
 
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> LsonType {
-        let lhs = self.lhs.validate(errors, type_map);
+    fn validate(&self, compile_time : &mut LibrettoCompiletime) -> LsonType {
+        let lhs = self.lhs.validate(compile_time);
 
         if let Some((op, rhs)) = self.rhs.first() {
-            let rhs = rhs.validate(errors, type_map);
+            let rhs = rhs.validate(compile_time);
             let mut expected_type = get_factor_type(&lhs, op, &rhs);
 
             if expected_type == LsonType::None {
-                errors.push(LibrettoCompileError::InvalidOperationError(lhs.to_string(), op.to_string(), rhs.to_string()));
+                compile_time.push_error(LibrettoCompileError::InvalidOperationError(lhs.to_string(), op.to_string(), rhs.to_string()));
                 return LsonType::None;
             }
 
             for i in 1..self.rhs.len() {
                 let (inner_op, inner)= &self.rhs[i];
-                let inner_type = inner.validate(errors, type_map);
+                let inner_type = inner.validate(compile_time);
                 let op_type = get_factor_type(&expected_type, inner_op, &inner_type);
                 if op_type == LsonType::None{
-                    errors.push(LibrettoCompileError::InvalidOperationError(expected_type.to_string(), op.to_string(), inner_type.to_string()));
+                    compile_time.push_error(LibrettoCompileError::InvalidOperationError(expected_type.to_string(), op.to_string(), inner_type.to_string()));
                     return LsonType::None;
                 }
             }

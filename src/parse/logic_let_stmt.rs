@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use crate::{lexer::{LibrettoTokenQueue, LibrettoLogicToken, LogicOrdinal}, lson::LsonType};
+use crate::{lexer::{LibrettoTokenQueue, LibrettoLogicToken, LogicOrdinal}, lson::LsonType, compiler::LibrettoCompiletime};
 
-use super::{logic_equality_expr::LogicEqualityExpr, LibrettoParsable, LibrettoCompileError, logic_assignment_stmt::LogicAssignmentStatement};
+use super::{logic_equality_expr::LogicEqualityExpr, LibrettoParsable, logic_assignment_stmt::LogicAssignmentStatement};
 
 pub struct LogicLetStatement {
     identifier: String,
@@ -14,11 +14,11 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicLetStatement {
         queue.next_is(LogicOrdinal::Let) && LogicAssignmentStatement::raw_check(queue)
     }
 
-    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
+    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, compile_time : &mut LibrettoCompiletime) -> Option<Self> {
         todo!()
     }
 
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> LsonType {
+    fn validate(&self, compile_time : &mut LibrettoCompiletime) -> LsonType {
         todo!()
     }
 }

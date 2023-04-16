@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
+use crate::compiler::{LibrettoCompileError, LibrettoCompiletime};
 use crate::lexer::{LibrettoLogicToken, LogicOrdinal };
 use crate::lson::{LsonType, Lson};
-use super::{LibrettoCompileError, LibrettoEvaluator};
+use super::LibrettoEvaluator;
 use super::{logic_term_expr::LogicTermExpr, LibrettoParsable};
 
 #[derive(Debug, PartialEq)]
@@ -37,8 +38,8 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicComparisonExpr {
         true
     }
 
-    fn parse(queue: &mut crate::lexer::LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<super::LibrettoCompileError>) -> Option<Self> {
-        let lhs = LogicTermExpr::parse(queue, errors).unwrap();
+    fn parse(queue: &mut crate::lexer::LibrettoTokenQueue<'a, LibrettoLogicToken>, compile_time : &mut LibrettoCompiletime) -> Option<Self> {
+        let lhs = LogicTermExpr::parse(queue, compile_time).unwrap();
         let mut rhs = Vec::new();
         
         loop {
@@ -54,7 +55,7 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicComparisonExpr {
                         _ => ComparisonOperator::LessThan
                     }
                 };
-                let value = LogicTermExpr::parse(queue, errors);
+                let value = LogicTermExpr::parse(queue, compile_time);
                 if value.is_some() {
                     rhs.push((operator, value.unwrap()));
                 }
@@ -66,14 +67,14 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicComparisonExpr {
         Some(LogicComparisonExpr { lhs, rhs })
     }
 
-    fn validate(&self, errors: &mut Vec<super::LibrettoCompileError>, type_map : &mut HashMap<String, LsonType>) -> LsonType {
-        let mut lhs_type = self.lhs.validate(errors, type_map);
+    fn validate(&self, compile_time : &mut LibrettoCompiletime) -> LsonType {
+        let mut lhs_type = self.lhs.validate(compile_time);
 
         if !self.rhs.is_empty() {
             for (op, rhs) in &self.rhs {
-                let rhs_type = rhs.validate(errors, type_map);
+                let rhs_type = rhs.validate(compile_time);
                 if let LsonType::None = lhs_type.get_comparison_type(rhs_type) {
-                    errors.push(LibrettoCompileError::InvalidOperationError(lhs_type.to_string(), op.to_string(), rhs_type.to_string()));
+                    compile_time.push_error(LibrettoCompileError::InvalidOperationError(lhs_type.to_string(), op.to_string(), rhs_type.to_string()));
                     return LsonType::None
                 }
                 lhs_type = rhs_type;
