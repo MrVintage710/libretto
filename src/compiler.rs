@@ -71,4 +71,10 @@ pub enum LibrettoCompileError {
 
     #[error("When parsing an expression with type {0}, there was a default supplied with type {1}. These types must be the same.")]
     ExprDefaultTypeMissmatch(String, String),
+
+    #[error("Cannot assign value to variable {0} because the variable is not the same type.")]
+    AssignmentWithInvalidType(String),
+    
+    #[error("Cannot assign value to undeclared variable '{0}'.")]
+    AssignmentWithUndeclaredVariable(String),
 }

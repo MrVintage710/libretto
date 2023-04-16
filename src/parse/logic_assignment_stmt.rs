@@ -28,7 +28,18 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAssignmentStatement 
     }
 
     fn validate(&self, compile_time : &mut LibrettoCompiletime) -> LsonType {
-        todo!()
+        let desired_type = compile_time.get_data(&self.ident);
+        let value_type = self.value.validate(compile_time);
+
+        if desired_type == LsonType::None {
+            compile_time.push_error(LibrettoCompileError::AssignmentWithUndeclaredVariable(self.ident.clone()))
+        }
+
+        if desired_type != value_type {
+            compile_time.push_error(LibrettoCompileError::AssignmentWithInvalidType(self.ident.clone()));
+        }
+
+        desired_type
     }
 }
 
@@ -56,5 +67,14 @@ mod tests {
         let ast = parse_expr::<LogicAssignmentStatement>("test = 2");
         // check_expr("3.14");
     // check_expr("\"Hello World\"");
+    }
+
+    #[test]
+    fn validate_assign_stmt() {
+        validate_expr::<LogicAssignmentStatement>("test = 2", 2, LsonType::None);
+        validate_expr::<LogicAssignmentStatement>("bar = 2", 1, LsonType::Bool);
+        validate_expr::<LogicAssignmentStatement>("foo = 2.0", 0, LsonType::Float);
+        // check_expr("3.14");
+        // check_expr("\"Hello World\"");
     }
 }
