@@ -1,3 +1,6 @@
+
+![libretto_logo](https://user-images.githubusercontent.com/8060151/232897806-94c5dbd3-43f2-43f5-a75a-e3b82cdd6af3.png)
+
 # Libretto Scripting Language
 
 The libretto scripting language is a strongly typed narrative scripting language designed for the Rust :crab: ecosystem. This language is in early stages of development, but here are some of its features: 
