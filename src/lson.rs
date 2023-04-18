@@ -1,15 +1,18 @@
+use strum::EnumDiscriminants;
+
 use crate::runtime::LibrettoRuntime;
 use core::fmt;
 use std::{
     collections::HashMap,
     fmt::{Debug, Display},
     ops::{self},
-    rc::Rc,
+    rc::Rc, cmp,
 };
 
 pub type LibrettoFunction = Rc<dyn Fn(Vec<Lson>, &mut LibrettoRuntime) -> Lson>;
 
-#[derive(Clone)]
+#[derive(Clone, EnumDiscriminants)]
+#[strum_discriminants(name(LsonType))]
 pub enum Lson {
     None,
     Int(i64),
@@ -18,7 +21,13 @@ pub enum Lson {
     Bool(bool),
     Array(Vec<Lson>),
     Struct(HashMap<String, Lson>),
-    Function(LibrettoFunction),
+    Function(LibrettoFunction, LsonType),
+}
+
+impl Default for Lson {
+    fn default() -> Self {
+        Lson::None
+    }
 }
 
 impl Lson {
@@ -109,9 +118,144 @@ impl Lson {
             None
         }
     }
+
+    pub fn matches_type(&self, t : LsonType) -> bool {
+        match self {
+            Lson::None => LsonType::None == t,
+            Lson::Int(_) => LsonType::Int == t,
+            Lson::Float(_) => LsonType::Float == t,
+            Lson::String(_) => LsonType::String == t,
+            Lson::Bool(_) => LsonType::Bool == t,
+            Lson::Array(_) => LsonType::Array == t,
+            Lson::Struct(_) => LsonType::Struct == t,
+            Lson::Function(_, _) => LsonType::Function == t,
+        }
+    }
+
+    pub fn get_type(&self) -> LsonType {
+        self.into()
+    }
 }
 
-impl From<i64> for Lson {
+impl ops::Not for Lson {
+    type Output = Lson;
+
+    fn not(self) -> Self::Output {
+        if let Lson::Bool(value) = self {
+            Lson::Bool(!value)
+        } else {
+            Lson::None
+        }
+    }
+}
+
+impl ops::Neg for Lson {
+    type Output = Lson;
+
+    fn neg(self) -> Self::Output {
+        match self {
+            Lson::Int(v1) => Lson::Int(-v1),
+            Lson::Float(v1) => Lson::Float(-v1),
+            _ => Lson::None
+        }
+    }
+}
+
+impl ops::Add for Lson {
+    type Output = Lson;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Lson::Int(v1), Lson::Int(v2)) => Lson::Int(v1 + v2),
+            (Lson::Float(v1), Lson::Float(v2)) => Lson::Float(v1 + v2),
+            (Lson::Float(v1), Lson::Int(v2)) => Lson::Float(v1 + v2 as f64),
+            (Lson::Int(v1), Lson::Float(v2)) => Lson::Float(v1 as f64 + v2),
+            (Lson::String(v1), Lson::String(v2)) => Lson::String(format!("{}{}", v1, v2)),
+            (Lson::String(v1), Lson::Int(v2)) => Lson::String(format!("{}{}", v1, v2)),
+            (Lson::String(v1), Lson::Float(v2)) => Lson::String(format!("{}{}", v1, v2)),
+            (Lson::String(v1), Lson::Bool(v2)) => Lson::String(format!("{}{}", v1, v2)),
+            (Lson::Int(v1), Lson::String(v2)) => Lson::String(format!("{}{}", v1, v2)),
+            (Lson::Float(v1), Lson::String(v2)) => Lson::String(format!("{}{}", v1, v2)),
+            (Lson::Bool(v1), Lson::String(v2)) => Lson::String(format!("{}{}", v1, v2)),
+            _ => Lson::None
+        }
+    }
+}
+
+impl ops::Sub for Lson {
+    type Output = Lson;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Lson::Float(v1), Lson::Float(v2)) => Lson::Float(v1 - v2),
+            (Lson::Float(v1), Lson::Int(v2)) => Lson::Float(v1 - v2 as f64),
+            (Lson::Int(v1), Lson::Float(v2)) => Lson::Float(v1 as f64 - v2),
+            (Lson::Int(v1), Lson::Int(v2)) => Lson::Int(v1 - v2),
+            _ => Lson::None
+        }
+    }
+}
+
+impl ops::Mul for Lson {
+    type Output = Lson;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Lson::Float(v1), Lson::Float(v2)) => Lson::Float(v1 * v2),
+            (Lson::Float(v1), Lson::Int(v2)) => Lson::Float(v1 * v2 as f64),
+            (Lson::Int(v1), Lson::Float(v2)) => Lson::Float(v1 as f64 - v2),
+            (Lson::Int(v1), Lson::Int(v2)) => Lson::Int(v1 * v2),
+            _ => Lson::None
+        }
+    }
+}
+
+impl ops::Div for Lson {
+    type Output = Lson;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Lson::Float(v1), Lson::Float(v2)) => Lson::Float(v1 / v2),
+            (Lson::Float(v1), Lson::Int(v2)) => Lson::Float(v1 / v2 as f64),
+            (Lson::Int(v1), Lson::Float(v2)) => Lson::Float(v1 as f64 / v2),
+            (Lson::Int(v1), Lson::Int(v2)) => Lson::Int(v1 / v2),
+            _ => Lson::None
+        }
+    }
+}
+
+impl PartialEq for Lson {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Int(l0), Self::Int(r0)) => l0 == r0,
+            (Self::Float(l0), Self::Float(r0)) => l0 == r0,
+            (Self::Float(l0), Self::Int(r0)) => *l0 == *r0 as f64,
+            (Self::Int(l0), Self::Float(r0)) => *l0 as f64 == *r0,
+            (Self::String(l0), Self::String(r0)) => l0 == r0,
+            (Self::Bool(l0), Self::Bool(r0)) => l0 == r0,
+            (Self::Array(l0), Self::Array(r0)) => l0 == r0,
+            (Self::Struct(l0), Self::Struct(r0)) => l0 == r0,
+            (Self::Function(l0, l1), Self::Function(r0, r1)) => false,
+            _ => core::mem::discriminant(self) == core::mem::discriminant(other),
+        }
+    }
+}
+
+impl PartialOrd for Lson {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        match (self, other) {
+            (Lson::Float(v1), Lson::Float(v2)) => v1.partial_cmp(v2),
+            (Lson::Float(v1), Lson::Int(v2)) => v1.partial_cmp(&(*v2 as f64)),
+            (Lson::Int(v1), Lson::Float(v2)) => v1.partial_cmp(&(*v2 as i64)),
+            (Lson::Int(v1), Lson::Int(v2)) => v1.partial_cmp(v2),
+            (Lson::Bool(v1), Lson::Bool(v2)) => v1.partial_cmp(v2),
+            (Lson::String(v1), Lson::String(v2)) => v1.partial_cmp(v2),
+            _ => Some(cmp::Ordering::Equal)
+        }
+    }
+}
+
+ impl From<i64> for Lson {
     fn from(value: i64) -> Self {
         Lson::Int(value)
     }
@@ -301,22 +445,101 @@ impl Debug for Lson {
             Self::Bool(arg0) => f.debug_tuple("Bool").field(arg0).finish(),
             Self::Array(arg0) => f.debug_tuple("Array").field(arg0).finish(),
             Self::Struct(arg0) => f.debug_tuple("Struct").field(arg0).finish(),
-            Self::Function(arg0) => f.debug_tuple("Function").field(&"()").finish(),
+            Self::Function(arg0, arg1) => f.write_str(format!("Function() -> {}", arg1.to_string()).as_str()),
         }
     }
 }
 
-impl PartialEq for Lson {
-    fn eq(&self, other: &Self) -> bool {
+//================================================================================================
+//          Lson Type
+//================================================================================================
+
+impl LsonType {
+    pub fn get_sum_type(&self, other : LsonType) -> LsonType {
         match (self, other) {
-            (Self::Int(l0), Self::Int(r0)) => l0 == r0,
-            (Self::Float(l0), Self::Float(r0)) => l0 == r0,
-            (Self::String(l0), Self::String(r0)) => l0 == r0,
-            (Self::Bool(l0), Self::Bool(r0)) => l0 == r0,
-            (Self::Array(l0), Self::Array(r0)) => l0 == r0,
-            (Self::Struct(l0), Self::Struct(r0)) => l0 == r0,
-            (Self::Function(l0), Self::Function(r0)) => false,
-            _ => core::mem::discriminant(self) == core::mem::discriminant(other),
+            (LsonType::Float, LsonType::Float) |
+            (LsonType::Float, LsonType::Int) |
+            (LsonType::Int, LsonType::Float) => LsonType::Float,
+            (_, LsonType::String) |
+            (LsonType::String, _) => LsonType::String,
+            (LsonType::Int, LsonType::Int) => LsonType::Int,
+            _ => LsonType::None
+        }
+    }
+
+    pub fn get_difference_type(&self, other : LsonType) -> LsonType {
+        match (self, other) {
+            (LsonType::Float, LsonType::Float) |
+            (LsonType::Float, LsonType::Int) |
+            (LsonType::Int, LsonType::Float) => LsonType::Float,
+            (LsonType::Int, LsonType::Int) => LsonType::Int,
+            _ => LsonType::None
+        }
+    }
+
+    pub fn get_product_type(&self, other : LsonType) -> LsonType {
+        match (self, other) {
+            (LsonType::Float, LsonType::Float) |
+            (LsonType::Float, LsonType::Int) |
+            (LsonType::Int, LsonType::Float) => LsonType::Float,
+            (LsonType::Int, LsonType::Int) => LsonType::Int,
+            _ => LsonType::None
+        }
+    }
+
+    pub fn get_quotient_type(&self, other : LsonType) -> LsonType {
+        match (self, other) {
+            (LsonType::Float, LsonType::Float) |
+            (LsonType::Float, LsonType::Int) |
+            (LsonType::Int, LsonType::Float) => LsonType::Float,
+            (LsonType::Int, LsonType::Int) => LsonType::Int,
+            _ => LsonType::None
+        }
+    }
+
+    pub fn get_comparison_type(&self, other : LsonType) -> LsonType {
+        match (self, other) {
+            (LsonType::Float, LsonType::Float) |
+            (LsonType::Int, LsonType::Int) |
+            (LsonType::Int, LsonType::Float) |
+            (LsonType::Float, LsonType::Int) => LsonType::Bool,
+            _ => LsonType::None
+        }
+    }
+
+    pub fn get_equality_type(&self, other : LsonType) -> LsonType {
+        match (self, other) {
+            (LsonType::Int, LsonType::Float) |
+            (LsonType::Float, LsonType::Int) |
+            (LsonType::Int, LsonType::Int) |
+            (LsonType::Float, LsonType::Float) |
+            (LsonType::String, LsonType::String) |
+            (LsonType::Bool, LsonType::Bool) |
+            (LsonType::Array, LsonType::Array) |
+            (LsonType::Struct, LsonType::Struct) |
+            (LsonType::Function, LsonType::Function) => LsonType::Bool,
+            _ => LsonType::None
+        }
+    }
+}
+
+impl Default for LsonType {
+    fn default() -> Self {
+        LsonType::None
+    }
+}
+
+impl ToString for LsonType {
+    fn to_string(&self) -> String {
+        match self {
+            LsonType::None => String::from("none"),
+            LsonType::Int => String::from("int"),
+            LsonType::Float => String::from("float"),
+            LsonType::String => String::from("string"),
+            LsonType::Bool => String::from("bool"),
+            LsonType::Array => String::from("array"),
+            LsonType::Struct => String::from("struct"),
+            LsonType::Function => String::from("function"),
         }
     }
 }
@@ -359,7 +582,7 @@ impl LsonIndex for usize {
                     )
                 })
             }
-            _ => panic!("cannot access index {} of LSON {}", self, Type(value)),
+            _ => panic!("cannot access index {} of LSON {:?}", self, value.get_type()),
         }
     }
 }
@@ -385,7 +608,7 @@ impl LsonIndex for str {
         }
         match value {
             Lson::Struct(map) => map.entry(self.to_owned()).or_insert(Lson::None),
-            _ => panic!("cannot access key {:?} in JSON {}", self, Type(value)),
+            _ => panic!("cannot access key {:?} in JSON {:?}", self, value.get_type()),
         }
     }
 }
@@ -418,24 +641,6 @@ where
 
     fn index_or_insert<'l>(&self, value: &'l mut Lson) -> &'l mut Lson {
         (**self).index_or_insert(value)
-    }
-}
-
-/// Used in panic messages.
-struct Type<'a>(&'a Lson);
-
-impl<'a> Display for Type<'a> {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        match *self.0 {
-            Lson::None => formatter.write_str("undefined"),
-            Lson::Bool(_) => formatter.write_str("boolean"),
-            Lson::Int(_) => formatter.write_str("int"),
-            Lson::Float(_) => formatter.write_str("float"),
-            Lson::String(_) => formatter.write_str("string"),
-            Lson::Array(_) => formatter.write_str("array"),
-            Lson::Struct(_) => formatter.write_str("struct"),
-            Lson::Function(_) => formatter.write_str("function"),
-        }
     }
 }
 

@@ -6,6 +6,9 @@ edition = "2021"
 # Could be name libretto
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+name = "libretto"
+
 [dependencies]
 logos = "0.12.1"
 serde = "1.0.152"

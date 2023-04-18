@@ -1,49 +1,19 @@
-use std::collections::{btree_map::Values, HashMap};
+use std::collections::HashMap;
 
 use super::{
-    util::ParseCommaSeparatedList, LibrettoCompileError, LibrettoCompileResult, LibrettoParsable,
-    ParseResult,
+    util::{CommaSeparatedList, KeyValuePair}, LibrettoParsable, LibrettoEvaluator, logic_equality_expr::LogicEqualityExpr,
 };
 use crate::{
-    lexer::{self, LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal},
-    logic::lson::Lson,
-    parse_ast,
+    lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal},
+    lson::{Lson, LsonType},
+    parse_ast, runtime::LibrettoRuntime, compiler::LibrettoCompiletime,
 };
 
-//==================================================================================================
-//          Logic Value
-//==================================================================================================
-
-/// This Enum is part of the Libretto AST. It represents a value inside of the source code of Libretto. This is any of the following:
-///
-/// Int
-/// ``` 1 ```
-///
-/// Float
-/// ``` 3.1459 ```
-///
-/// String
-/// ``` "Hello World" ```
-///
-/// Bool
-/// ``` true ```
-///
-/// Arrays
-/// ``` [1, 2, 3, 4] ```
-///
-/// Struct
-/// ``` {foo : "bar"} ```
-///
-/// Functions (WIP)
-/// ``` () : string { return "Hello World!" } ```
-///
-/// Evaluates to Lson obj containing these values
 #[derive(Debug, PartialEq)]
 pub enum LogicValue {
     Literal(Lson),
     Variable(String),
 }
-
 impl From<Lson> for LogicValue {
     fn from(value: Lson) -> Self {
         LogicValue::Literal(value)
@@ -51,38 +21,42 @@ impl From<Lson> for LogicValue {
 }
 
 impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
+
     fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
-        //Check if the next token is one of the following:
-        //String Literal, Bool Literal, Float Literal, Int Literal, Identifier
-        //If it is, move the queue cursor forward by 1 and return true, else return false
-        if Lson::raw_check(queue) {
-            return true;
-        }
+        queue.next_is(LogicOrdinal::Identifier) || Lson::raw_check(queue)
+    }
+    
+    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, compile_time : &mut LibrettoCompiletime) -> Option<Self> {
         if queue.next_is(LogicOrdinal::Identifier) {
-            return true;
+            if let Some(LibrettoLogicToken::Identifier(value)) = queue.pop() {
+                Some(Self::Variable(value))
+            } else {
+                None
+            }
+        } else {
+            if let Some(lson) = Lson::parse(queue, compile_time) {
+                Some(Self::Literal(lson))
+            } else {
+                None
+            }
         }
-        false
     }
 
-    ///Parse a LogicValue Object from a Token Queue
-    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
-        if let Some(lson) = Lson::checked_parse(queue, errors) {
-            return Some(LogicValue::Literal(lson.clone()));
-        }
-
-        if let Some(LibrettoLogicToken::Identifier(value)) =
-            queue.pop_if_next_is(LogicOrdinal::Identifier)
-        {
-            return Some(LogicValue::Variable(value.clone()));
-        }
-
-        None
-    }
-
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) {
+    fn validate(&self, compile_time : &mut LibrettoCompiletime) -> LsonType {
         match self {
-            LogicValue::Literal(lson) => lson.validate(errors),
-            LogicValue::Variable(_) => {},
+            LogicValue::Literal(lson) => lson.validate(compile_time),
+            LogicValue::Variable(value) => {
+                return compile_time.get_data(value);
+            },
+        }
+    }
+}
+
+impl LibrettoEvaluator for LogicValue {
+    fn evaluate(&self, runtime: &mut LibrettoRuntime) -> Lson {
+        match self {
+            LogicValue::Literal(value) => value.clone(),
+            LogicValue::Variable(ident) => runtime.get_data(ident).clone(),
         }
     }
 }
@@ -91,31 +65,32 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
 //          Lson Parsable
 //==================================================================================================
 
+type ObjectTerm<'a> = CommaSeparatedList<'a, KeyValuePair<'a, Lson, LibrettoLogicToken>, LibrettoLogicToken>;
+type FunctionParams<'a> = CommaSeparatedList<'a, KeyValuePair<'a, LsonType, LibrettoLogicToken>, LibrettoLogicToken>;
+type ArrayTerm<'a> = CommaSeparatedList<'a, Lson, LibrettoLogicToken>;
+
 impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
     fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
         if queue.next_is(LogicOrdinal::LeftCurlyBracket) {
-            if !ParseCommaSeparatedList::<'a, LogicObjectKeyValue, LibrettoLogicToken>::raw_check(
-                queue,
-            ) {
-                return false;
-            }
-            if !queue.next_is(LogicOrdinal::RightCurlyBracket) {
-                return false;
-            }
-            true
+            ObjectTerm::<'a>::raw_check(queue) &&
+            queue.next_is(LogicOrdinal::RightCurlyBracket)
         } else if queue.next_is(LogicOrdinal::LeftBracket) {
-            if !ParseCommaSeparatedList::<'a, Lson, LibrettoLogicToken>::raw_check(queue) {
-                return false;
-            }
-            if !queue.next_is(LogicOrdinal::RightBracket) {
-                return false;
-            }
-            true
+            ArrayTerm::<'a>::raw_check(queue) &&
+            queue.next_is(LogicOrdinal::RightBracket)
+        } else if queue.next_is(LogicOrdinal::LeftParen) {
+            LogicEqualityExpr::raw_check(queue) && queue.next_is(LogicOrdinal::RightParen)
+//            if ArrayTerm::<'a>::raw_check(queue) &&
+//            queue.next_is(LogicOrdinal::RightParen){
+//                queue.next_is(LogicOrdinal::Arrow);
+//                queue.next_is(LogicOrdinal::Type);
+//                return true;
+//            }
         } else if queue.next_is([
             LogicOrdinal::StringLiteral,
             LogicOrdinal::BoolLiteral,
             LogicOrdinal::FloatLiteral,
             LogicOrdinal::IntLiteral,
+            LogicOrdinal::NoneLiteral
         ]) {
             true
         } else {
@@ -123,13 +98,13 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
         }
     }
 
-    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
+    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, compile_time : &mut LibrettoCompiletime) -> Option<Self> {
         if let Some(token) = queue.pop() {
             if token.check_ordinal(LogicOrdinal::LeftCurlyBracket) {
                 let pairs = parse_ast!(
-                    ParseCommaSeparatedList::<'a, LogicObjectKeyValue, LibrettoLogicToken>,
+                    ObjectTerm::<'a>,
                     queue,
-                    errors
+                    compile_time
                 );
                 if !queue.pop_and_check_if(LogicOrdinal::RightCurlyBracket) {
                     // Maybe handle error
@@ -137,14 +112,14 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
                 let data: HashMap<String, Lson> = pairs
                     .values()
                     .iter()
-                    .map(|e| (e.key.clone(), e.value.clone()))
+                    .map(|e| (e.key().to_string(), e.value().clone()))
                     .collect();
                 Some(Lson::Struct(data))
             } else if token.check_ordinal(LogicOrdinal::LeftBracket) {
                 let pairs = parse_ast!(
-                    ParseCommaSeparatedList::<'a, Lson, LibrettoLogicToken>,
+                    ArrayTerm::<'a>,
                     queue,
-                    errors
+                    compile_time
                 );
                 if !queue.pop_and_check_if(LogicOrdinal::RightBracket) {
                     //handle
@@ -154,16 +129,19 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
             } else {
                 match token {
                     LibrettoLogicToken::StringLiteral(value) => {
-                        Some(Lson::String(value).into())
+                        Some(Lson::String(value))
                     }
                     LibrettoLogicToken::BoolLiteral(value) => {
-                        Some(Lson::Bool(value).into())
+                        Some(Lson::Bool(value))
                     }
                     LibrettoLogicToken::FloatLiteral(value) => {
-                        Some(Lson::Float(value).into())
+                        Some(Lson::Float(value))
                     }
                     LibrettoLogicToken::IntLiteral(value) => {
-                        Some(Lson::Int(value).into())
+                        Some(Lson::Int(value))
+                    }
+                    LibrettoLogicToken::NoneLiteral => {
+                        Some(Lson::None)
                     }
                     _ => None,
                 }
@@ -173,73 +151,45 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
         }
     }
 
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) {
+    fn validate(&self, compile_time : &mut LibrettoCompiletime) -> LsonType {
         match self {
-            Lson::None => errors.push(LibrettoCompileError::NullValueError),
             Lson::Array(values) => {
                 for i in values.iter() {
-                    i.validate(errors)
-                }
+                    i.validate(compile_time);
+                };
             }
             Lson::Struct(pairs) => {
                 for value in pairs.values() {
-                    value.validate(errors)
+                    value.validate(compile_time);
                 }
             }
             _ => {}
         }
+
+        self.into()
     }
 }
 
 //==================================================================================================
-//          LogicKeyValue
+//          Lson Parsable
 //==================================================================================================
 
-#[derive(Debug, PartialEq)]
-pub struct LogicObjectKeyValue {
-    key: String,
-    value: Lson,
-}
-
-impl LogicObjectKeyValue {
-    pub fn key(&self) -> &str {
-        &self.key
-    }
-
-    pub fn value(&self) -> &Lson {
-        &self.value
-    }
-}
-
-impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicObjectKeyValue {
+impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LsonType {
     fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
-        if !queue.next_is(LogicOrdinal::Identifier) {
-            return false;
-        }
-        if !queue.next_is(LogicOrdinal::Colon) {
-            return false;
-        }
-        if !Lson::raw_check(queue) {
-            return false;
-        }
-        true
+        queue.next_is([LogicOrdinal::Type])
     }
 
-    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
-        queue.reset();
-        let ident = queue.pop_if_next_is(LogicOrdinal::Identifier).unwrap();
-        queue.pop_if_next_is(LogicOrdinal::Colon);
-        let value = Lson::parse(queue, errors).unwrap();
-
-        if let LibrettoLogicToken::Identifier(key) = ident {
-            Some(LogicObjectKeyValue { key, value })
-        } else {
-            None
+    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, compile_time : &mut LibrettoCompiletime) -> Option<Self> {
+        let token = queue.pop();
+        if let Some(LibrettoLogicToken::Type(t)) = token {
+            return Some(t)
         }
+
+        None
     }
 
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) {
-        self.value.validate(errors)
+    fn validate(&self, compile_time : &mut LibrettoCompiletime) -> LsonType {
+        *self
     }
 }
 
@@ -249,64 +199,59 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicObjectKeyValue {
 
 #[cfg(test)]
 mod tests {
-    use logos::Logos;
+    use std::collections::HashMap;
 
     use crate::{
-        lexer::{LibrettoLogicToken, LibrettoTokenQueue},
-        logic::lson::Lson,
-        parse::{logic_value::LogicObjectKeyValue, LibrettoParsable},
+        lson::{Lson, LsonType},
+        parse::test_util::*,
     };
 
-    use super::LogicValue;
-
-    fn check_expr<'a, T: LibrettoParsable<'a, LibrettoLogicToken>>(
-        source: &'a str,
-        number_of_tokens: usize,
-    ) {
-        let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
-        let check = T::check(&mut queue);
-        assert!(check);
-        assert_eq!(queue.cursor(), 0);
-        queue.reset();
-        let check = T::raw_check(&mut queue);
-        assert!(check);
-        assert_eq!(queue.cursor(), number_of_tokens)
-    }
-
-    fn parse_expr<'a, T: LibrettoParsable<'a, LibrettoLogicToken>>(source: &'a str) -> T {
-        let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
-        let result = T::checked_parse(&mut queue, &mut Vec::new());
-        assert!(result.is_some());
-        result.unwrap()
-    }
-
-    #[test]
-    fn check_key_value_pairs() {
-        check_expr::<LogicObjectKeyValue>("key : \"value\"", 3);
-        check_expr::<LogicObjectKeyValue>("key : false", 3);
-        check_expr::<LogicObjectKeyValue>("key : 3.14", 3);
-        check_expr::<LogicObjectKeyValue>("key : 3", 3);
-    }
-
-    #[test]
-    fn parse_key_value_pairs() {
-        let ast = parse_expr::<LogicObjectKeyValue>("key : \"value\"");
-        assert_eq!(ast.key, "key");
-        assert_eq!(ast.value, Lson::String("value".to_string()))
-    }
+    use super::*;
 
     #[test]
     fn check_lson() {
         check_expr::<Lson>("3", 1);
+        check_expr::<Lson>("none", 1);
         check_expr::<Lson>("[true, false]", 5);
         check_expr::<Lson>("{ key : false, test : false }", 9);
+    }
+
+    #[test]
+    fn parse_lson() {
+        let ast = parse_expr::<Lson>("none");
+        assert_eq!(ast, Lson::None);
+
+        let ast = parse_expr::<Lson>("{obj : {key : \"value\"}}");
+        assert_eq!(ast, Lson::Struct(HashMap::from([("obj".to_string(), Lson::Struct(HashMap::from([("key".to_string(), "value".into())])))])));
+
+        let ast = parse_expr::<Lson>("[true, false]");
+        assert_eq!(ast, Lson::Array(vec![Lson::Bool(true), Lson::Bool(false)]));
+    }
+
+    #[test]
+    fn validate_lson() {
+        validate_expr::<Lson>("3", 0, LsonType::Int);
+        validate_expr::<Lson>("none", 0, LsonType::None);
+        validate_expr::<Lson>("[true, false]", 0, LsonType::Array);
         // check_expr("3.14");
         // check_expr("\"Hello World\"");
     }
 
     #[test]
-    fn parse_lson() {
-        let ast = parse_expr::<Lson>("{obj : {key : \"value\"}}");
+    fn check_logic_value() {
+        check_expr::<LogicValue>("3", 1);
+        check_expr::<LogicValue>("[true, false]", 5);
+        check_expr::<LogicValue>("{ key : false, test : false }", 9);
+        check_expr::<LogicValue>("test", 1);
+        check_expr::<LogicValue>("(2+2)", 5);
+
+        // check_expr("3.14");
+        // check_expr("\"Hello World\"");
+    }
+
+    #[test]
+    fn parse_logic_value() {
+        let ast = parse_expr::<LogicValue>("{obj : {key : \"value\"}}");
         println!("{:?}", ast);
 
         let ast = parse_expr::<Lson>("[true, false]");
@@ -314,30 +259,10 @@ mod tests {
     }
 
     #[test]
-    fn check_logic_value() {
-        check_expr::<LogicValue>("3", 1);
-        check_expr::<LogicValue>("ident", 1);
+    fn validate_logic_value() {
+        validate_expr::<LogicValue>("3", 0, LsonType::Int);
+        validate_expr::<LogicValue>("[true, false]", 0, LsonType::Array);
+        validate_expr::<LogicValue>("foo", 0, LsonType::Float);
+        validate_expr::<LogicValue>("test", 0, LsonType::None);
     }
-
-    #[test]
-    fn parse_logic_value() {
-        let ast = parse_expr::<LogicValue>("3");
-        if let LogicValue::Literal(Lson::Int(value)) = ast {
-            assert_eq!(value, 3);
-        } else {
-            assert!(false)
-        }
-
-        let ast = parse_expr::<LogicValue>("ident");
-        if let LogicValue::Variable(value) = ast {
-            assert_eq!(value, "ident".to_string());
-        } else {
-            assert!(false)
-        }
-        // check_expr("3.14");
-        // check_expr("\"Hello World\"");
-    }
-
-    #[test]
-    fn validate_logic_value() {}
 }

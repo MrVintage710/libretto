@@ -4,11 +4,12 @@
 <
 
 //Any logic component only shares state with other logic blocks within it's line.
-//The Only exception are logic blocks that are declared outside of a dialog.
+//The Only exceptions are logic blocks that are declared outside of a dialog.
 //These blocks are considered global and will run when the script starts
 
 //You can request data from the runtime with the request keyword. If the resource isn't available, then the execution fails.
-request status;
+//When the variable is updated in libretto, it will be updated in rust aswell. This will only happen when using the step_mut() method.
+request status : string ? "moderate";
 
 //Requests can have default values and not panic if the resource is not found.
 request player ? false;
@@ -23,7 +24,7 @@ let float_var = 3.1415;
 let bool_var = false;
 
 //Strings
-let string_var = "value"
+let string_var : string;
 
 //arrays
 let array_var = [1, 2, 3, 4]
@@ -39,7 +40,7 @@ let func_var = () {
 }
 
 //or you can declare functions like
-function sum(a : int, b : int) : int {
+function sum(a : int, b : int) -> int {
   return a + b;
 }
 
@@ -61,7 +62,7 @@ while false {
 
 //Default functions
 
-type(obj : any) : string //returns the string representation of the type
+type(obj : any) -> string //returns the string representation of the type
 
 wait(time : float) //Stops the thread for 'time' seconds
 

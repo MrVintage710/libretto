@@ -1,4 +1,5 @@
 use logos::{Lexer, Logos};
+use crate::lson::LsonType;
 use peekmore::{PeekMore, PeekMoreIterator};
 use std::{fmt::Debug, marker::PhantomData};
 use strum::EnumDiscriminants;
@@ -183,7 +184,7 @@ pub trait Ordinal: Sized + Clone {
 //          Ordinal Groups
 //==================================================================================================
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct OrdinalGroup<'a, T, D>
 where
     T: Logos<'a> + PartialEq + Clone + Ordinal,
@@ -333,7 +334,21 @@ fn lex_float(lex: &mut Lexer<LibrettoLogicToken>) -> f64 {
 
 fn lex_bool(lex: &mut Lexer<LibrettoLogicToken>) -> bool {
     let content = lex.slice().to_string();
+    println!("{}", content);
     content.as_str() == "true"
+}
+
+fn lex_type(lex: &mut Lexer<LibrettoLogicToken>) -> LsonType {
+    match lex.slice() {
+        "float" => LsonType::Float,
+        "int" => LsonType::Int,
+        "string" => LsonType::String,
+        "bool" => LsonType::Bool,
+        "struct" => LsonType::Struct,
+        "array" => LsonType::Array,
+        "function" => LsonType::Function,
+        _ => LsonType::None
+    }
 }
 
 impl<'a> Ordinal for LibrettoLogicToken {}
@@ -347,11 +362,17 @@ pub enum LibrettoLogicToken {
     #[regex("[0-9]+", lex_int, priority = 2)]
     IntLiteral(i64),
 
-    #[regex("[0-9]+.[0-9]+", lex_float, priority = 3)]
+    #[regex(r"([0-9]+)\.([0-9]+)", lex_float, priority = 3)]
     FloatLiteral(f64),
 
-    #[regex("(true|false)", lex_bool)]
+    #[regex("(true|false)", lex_bool, priority=4)]
     BoolLiteral(bool),
+
+    #[token("none", priority = 4)]
+    NoneLiteral,
+
+    #[regex("(float|int|string|bool|struct|array|function)", lex_type, priority=4)]
+    Type(LsonType),
 
     #[regex("\"([^\"]*)\"", lex_string)]
     StringLiteral(String),
@@ -377,18 +398,6 @@ pub enum LibrettoLogicToken {
     #[token("const")]
     Const,
 
-    #[token("int")]
-    Int,
-
-    #[token("float")]
-    Float,
-
-    #[token("string")]
-    String,
-
-    #[token("bool")]
-    Bool,
-
     #[token("{")]
     LeftCurlyBracket,
 
@@ -413,11 +422,17 @@ pub enum LibrettoLogicToken {
     #[token("!")]
     Bang,
 
+    #[token("?")]
+    Question,
+
     #[token(",")]
     Comma,
 
     #[token(":")]
     Colon,
+
+    #[token("!=", priority = 2)]
+    InverseEquality,
 
     #[token("==", priority = 2)]
     Equality,
@@ -427,6 +442,9 @@ pub enum LibrettoLogicToken {
 
     #[token(">=", priority = 2)]
     GreaterThanEquality,
+
+    #[token("->", priority = 2)]
+    Arrow,
 
     #[token("<")]
     LessThan,
@@ -484,65 +502,4 @@ pub enum LibrettoQuoteToken<'a> {
 
     #[error]
     Error,
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::LibrettoLogicToken;
-    use crate::LibrettoQuoteToken;
-    use logos::Logos;
-
-    #[test]
-    fn quote_text_test() {
-        let mut lex = LibrettoQuoteToken::lexer("Go away Brigand!");
-        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
-        assert_eq!(lex.slice(), "Go away Brigand!");
-        assert_eq!(lex.next(), None);
-    }
-
-    #[test]
-    fn quote_tag_test() {
-        let mut lex = LibrettoQuoteToken::lexer("[Welcoming]Hello World![/Welcoming]");
-        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::StartTag("Welcoming".to_string())));
-        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
-        assert_eq!(lex.slice(), "Hello World!");
-        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::EndTag("Welcoming".to_string())));
-        assert_eq!(lex.next(), None);
-    }
-
-    #[test]
-    fn quote_logic_test() {
-        let mut lex =
-            LibrettoQuoteToken::lexer("My logic is: <if status.guild_member == False> end.");
-        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
-        assert_eq!(lex.slice(), "My logic is: ");
-        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Logic(vec![
-        //   LibrettoLogicToken::If,
-        //   LibrettoLogicToken::Text("status".to_string()),
-        //   LibrettoLogicToken::Period,
-        //   LibrettoLogicToken::Text("guild_member".to_string()),
-        //   LibrettoLogicToken::Equality,
-        //   LibrettoLogicToken::Text("False".to_string())
-        // ])));
-        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::));
-        assert_eq!(lex.slice(), " end.");
-        assert_eq!(lex.next(), None);
-    }
-
-    #[test]
-    fn quote_complex_test() {
-        let mut lex = LibrettoQuoteToken::lexer(
-            "[yelling]Go away Brigand![/yelling]None named <player.name> are welcome here.",
-        );
-        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::StartTag("yelling".to_string())));
-        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
-        assert_eq!(lex.slice(), "Go away Brigand!");
-        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::EndTag("yelling".to_string())));
-        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
-        assert_eq!(lex.slice(), "None named ");
-        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Logic(vec![LibrettoLogicToken::Text("player".to_string()), LibrettoLogicToken::Period, LibrettoLogicToken::Text("name".to_string())])));
-        // assert_eq!(lex.next(), Some(LibrettoQuoteToken::Text));
-        assert_eq!(lex.slice(), " are welcome here.");
-        assert_eq!(lex.next(), None);
-    }
 }

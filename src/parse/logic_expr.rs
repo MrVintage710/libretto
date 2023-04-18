@@ -1,183 +1,101 @@
-use crate::{
-    lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal},
-};
+use std::collections::HashMap;
 
-use super::{logic_value::LogicValue, LibrettoCompileError, LibrettoParsable, ParseResult};
+use crate::{lson::{Lson, LsonType}, lexer::{LibrettoLogicToken, LogicOrdinal, LibrettoTokenQueue}, parse_ast, compiler::{LibrettoCompiletime, LibrettoCompileError}};
+use super::{logic_equality_expr::LogicEqualityExpr, LibrettoParsable, LibrettoEvaluator};
 
-//==================================================================================================
-//          Logic Unary Expression
-//==================================================================================================
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum UnaryOperator {
-    Negative,
-    Bang,
+pub struct LogicExpr {
+    expr : LogicEqualityExpr,
+    default : Option<Lson>
 }
 
-#[derive(Debug)]
-pub struct LogicUnaryExpr {
-    operator: Option<UnaryOperator>,
-    value: LogicValue,
-}
-
-impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
-    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
-        //for now
-        queue.reset();
-        let option_operator = queue.pop_if_next_is([LogicOrdinal::Sub, LogicOrdinal::Bang]);
-        let result = LogicValue::parse(queue, errors);
-
-        match result {
-            Some(value) => {
-                let operator = if option_operator.is_some() {
-                    match option_operator.unwrap() {
-                        LibrettoLogicToken::Bang => Some(UnaryOperator::Bang),
-                        LibrettoLogicToken::Sub => Some(UnaryOperator::Negative),
-                        _ => None,
-                    }
-                } else {
-                    None
-                };
-                Some(LogicUnaryExpr { operator, value })
-            }
-            None => None
+impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicExpr {
+    fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
+        let mut check = LogicEqualityExpr::raw_check(queue);
+        if queue.next_is(LogicOrdinal::Question) {
+            check &= Lson::raw_check(queue);
         }
+        check
     }
 
-    fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
-        let mut operator_space = 0;
-        queue.next_is([LogicOrdinal::Bang, LogicOrdinal::Sub]);
-        if LogicValue::raw_check(queue) {
-            return true;
+    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, compile_time : &mut LibrettoCompiletime) -> Option<Self> {
+        let expr = parse_ast!(LogicEqualityExpr, queue, compile_time);
+        let default = if let Some(_) = queue.pop_if_next_is(LogicOrdinal::Question) {
+            Some(parse_ast!(Lson, queue, compile_time))
         } else {
-            false
+            None
+        };
+        Some(LogicExpr{expr, default})
+    }
+
+    fn validate(&self, compile_time : &mut LibrettoCompiletime) -> LsonType {
+        let expected_type = self.expr.validate(compile_time);
+        if let Some(lson) = &self.default {
+            let default_type = lson.validate(compile_time);
+            if expected_type != default_type {
+                compile_time.push_error(LibrettoCompileError::ExprDefaultTypeMissmatch(expected_type.to_string(), default_type.to_string()))
+            }
+        };
+        expected_type
+    }
+}
+
+impl LibrettoEvaluator for LogicExpr {
+    fn evaluate(&self, runtime: &mut crate::runtime::LibrettoRuntime) -> Lson {
+        let value = self.expr.evaluate(runtime);
+        if let Lson::None = &value {
+            if self.default.is_some() {
+                self.default.as_ref().unwrap().clone()
+            } else {
+                Lson::None
+            }
+        } else {
+            value
         }
     }
-
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) {
-        todo!()
-    }
 }
-
-//==================================================================================================
-//          Additive Expression
-//==================================================================================================
-
-#[derive(Debug)]
-pub struct LogicAdditiveExpr {
-    lhs: LogicUnaryExpr,
-    rhs: Option<LogicUnaryExpr>,
-    is_adding: bool,
-}
-
-impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAdditiveExpr {
-    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, errors: &mut Vec<LibrettoCompileError>) -> Option<Self> {
-        //This needs work
-
-        // queue.reset();
-        // let lhs = LogicUnaryExpr::parse(queue, errors);
-        // let operator = queue.pop_if_next_is([LogicOrdinal::Add, LogicOrdinal::Sub]);
-        // let rhs = parse_ast!(LogicUnaryExpr, queue);
-
-        // if let Some(operator) = operator {
-        //     let is_adding = match operator {
-        //         LibrettoLogicToken::Add => true,
-        //         LibrettoLogicToken::Sub => false,
-        //         _ => return ParseResult::Error("Not a valid operator".to_owned()),
-        //     };
-
-        //     return ParseResult::Parsed(LogicAdditiveExpr {
-        //         lhs,
-        //         rhs: Some(rhs),
-        //         is_adding,
-        //     });
-        // }
-
-        // ParseResult::Failure
-
-        None
-    }
-
-    fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
-        if !LogicValue::raw_check(queue) {
-            return false;
-        };
-        if !queue.next_is([LogicOrdinal::Add, LogicOrdinal::Sub]) {
-            return false;
-        };
-        LogicValue::raw_check(queue);
-        true
-    }
-
-    fn validate(&self, errors: &mut Vec<LibrettoCompileError>) {
-        todo!()
-    }
-}
-
-//==================================================================================================
-//          Tests
-//==================================================================================================
 
 #[cfg(test)]
 mod tests {
-    use logos::Logos;
+    use std::collections::HashMap;
 
     use crate::{
-        lexer::{LibrettoLogicToken, LibrettoTokenQueue},
-        logic::lson::Lson,
-        parse::{self, LibrettoParsable, ParseResult},
+        lson::{Lson, LsonType},
+        parse::test_util::*,
+        parse::logic_equality_expr::LogicEqualityExpr
     };
 
-    use super::{LogicUnaryExpr, LogicValue, UnaryOperator};
+    use super::*;
 
-    fn check_expr(source: &str) {
-        let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
-        let check = LogicUnaryExpr::raw_check(&mut queue);
-        assert!(check);
-    }
-
-    fn check_expr_inv(source: &str) {
-        let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
-        let check = LogicUnaryExpr::raw_check(&mut queue);
-        assert!(!check);
+    #[test]
+    fn check_logic_expr() {
+        check_expr::<LogicExpr>("foo ? true", 3);
+        check_expr::<LogicExpr>("foo", 1);
+        // check_expr("3.14");
+        // check_expr("\"Hello World\"");
     }
 
     #[test]
-    fn check_unary_expr() {
-        check_expr("-3.14");
-        check_expr("!false");
-        check_expr("3.14");
-        check_expr("false");
-
-        check_expr_inv("!!false");
-        check_expr_inv("function");
+    fn parse_logic_expr() {
+        let ast = parse_expr::<LogicExpr>("foo ? true");
+        assert_eq!(ast.expr, parse_expr::<LogicEqualityExpr>("foo"));
+        assert!(ast.default.is_some());
+        assert_eq!(ast.default.unwrap(), parse_expr::<Lson>("true"));
+        
+        let ast = parse_expr::<LogicExpr>("bar");
+        assert_eq!(ast.expr, parse_expr::<LogicEqualityExpr>("bar"));
+        assert!(ast.default.is_none());
     }
 
     #[test]
-    fn parse_unary_expr() {
-        // fn parse_check(source: &str, operator: Option<UnaryOperator>, value: Lson) {
-        //     let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
-        //     let parse = LogicUnaryExpr::parse(&mut queue);
-        //     if let Some(expr) = parse {
-        //         assert_eq!(expr.operator, operator);
-        //         assert_eq!(expr.value, LogicValue::Literal(value))
-        //     } else {
-        //         assert!(false)
-        //     }
-        // }
-
-        // parse_check("-3.14", Some(UnaryOperator::Negative), Lson::Float(3.14));
-        // parse_check("!false", Some(UnaryOperator::Bang), Lson::Bool(false));
-        // parse_check("3.14", None, Lson::Float(3.14));
-        // parse_check("true", None, Lson::Bool(true));
+    fn validate_logic_expr() {
+        validate_expr::<LogicExpr>("10 < 15 ? false", 0, LsonType::Bool);
+        validate_expr::<LogicExpr>("\"test\" ? true", 1, LsonType::String);
     }
 
     #[test]
-    fn check_binary_expr() {
-        // check_expr("1 + 1");
-        // check_expr("false + true");
-        // check_expr("\"Hello\" + \"world!\"");
-        // check_expr("1");
-        // check_expr("false");
+    fn eval_logic_expr() {
+        evaluate_expr::<LogicExpr>("10 < 15 ? false", Lson::Bool(true));
+        evaluate_expr::<LogicExpr>("bar ? true", Lson::Bool(true));
     }
 }
+
