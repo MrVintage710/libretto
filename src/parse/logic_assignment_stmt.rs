@@ -58,15 +58,11 @@ mod tests {
     fn check_assign_stmt() {
         check_expr::<LogicAssignmentStatement>("test = 2", 3);
         check_expr::<LogicAssignmentStatement>("test = layer ? true", 5);
-        // check_expr("3.14");
-        // check_expr("\"Hello World\"");
     }
 
     #[test]
     fn parse_assign_stmt() {
         let ast = parse_expr::<LogicAssignmentStatement>("test = 2");
-        // check_expr("3.14");
-    // check_expr("\"Hello World\"");
     }
 
     #[test]
@@ -74,7 +70,5 @@ mod tests {
         validate_expr::<LogicAssignmentStatement>("test = 2", 2, LsonType::None);
         validate_expr::<LogicAssignmentStatement>("bar = 2", 1, LsonType::Bool);
         validate_expr::<LogicAssignmentStatement>("foo = 2.0", 0, LsonType::Float);
-        // check_expr("3.14");
-        // check_expr("\"Hello World\"");
     }
 }
