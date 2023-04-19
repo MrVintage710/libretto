@@ -11,9 +11,20 @@ use std::{fmt::Debug, marker::PhantomData};
 //          Logic Typed Identifier
 //==================================================================================================
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct TypedIdentifier {
     implicit_type: Option<LsonType>,
     ident: String
+}
+
+impl TypedIdentifier {
+    pub fn implicit_type(&self) -> Option<LsonType> {
+        self.implicit_type
+    }
+
+    pub fn ident(&self) -> &str {
+        self.ident.as_ref()
+    }
 }
 
 impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for TypedIdentifier {

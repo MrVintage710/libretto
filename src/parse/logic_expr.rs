@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::{lson::{Lson, LsonType}, lexer::{LibrettoLogicToken, LogicOrdinal, LibrettoTokenQueue}, parse_ast, compiler::{LibrettoCompiletime, LibrettoCompileError}, runtime::{LibrettoRuntimeResult, LibrettoEvaluator}};
 use super::{logic_equality_expr::LogicEqualityExpr, LibrettoParsable};
 
+#[derive(Debug, PartialEq)]
 pub struct LogicExpr {
     expr : LogicEqualityExpr,
     default : Option<Lson>
