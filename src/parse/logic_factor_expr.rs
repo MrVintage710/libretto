@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use crate::{lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal}, parse_ast, lson::Lson, runtime::LibrettoRuntime, compiler::{LibrettoCompiletime, LibrettoCompileError}};
+use crate::{lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal}, parse_ast, lson::Lson, runtime::{LibrettoRuntime, LibrettoEvaluator, LibrettoRuntimeResult}, compiler::{LibrettoCompiletime, LibrettoCompileError}};
 use crate::lson::LsonType;
-use super::{logic_unary_expr::LogicUnaryExpr, LibrettoParsable, LibrettoEvaluator};
+use super::{logic_unary_expr::LogicUnaryExpr, LibrettoParsable};
 
 //==================================================================================================
 //          Factor Expression
@@ -102,16 +102,16 @@ fn get_factor_type(lhs : &LsonType, op : &FactorOperator, rhs : &LsonType) -> Ls
 }
 
 impl LibrettoEvaluator for LogicFactorExpr {
-    fn evaluate(&self, runtime: &mut LibrettoRuntime) -> Lson {
-        let mut v1 = self.lhs.evaluate(runtime);
+    fn evaluate(&self, runtime: &mut LibrettoRuntime) -> LibrettoRuntimeResult {
+        let mut v1 = self.lhs.evaluate(runtime)?;
         for (op, rhs) in &self.rhs {
-            let v2 = rhs.evaluate(runtime);
+            let v2 = rhs.evaluate(runtime)?;
             match op {
                 FactorOperator::Mult => v1 = v1 * v2,
                 FactorOperator::Div => v1 = v1 / v2,
             };
         }
-        v1
+        Ok(v1)
     }
 }
 

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{lexer::{LibrettoTokenQueue, LibrettoLogicToken, LogicOrdinal}, lson::LsonType, parse_ast, compiler::{LibrettoCompileError, LibrettoCompiletime}};
+use crate::{lexer::{LibrettoTokenQueue, LibrettoLogicToken, LogicOrdinal}, lson::{LsonType, Lson}, parse_ast, compiler::{LibrettoCompileError, LibrettoCompiletime}, runtime::{LibrettoRuntime, LibrettoEvaluator, LibrettoRuntimeResult}};
 
 use super::{logic_equality_expr::LogicEqualityExpr, LibrettoParsable, logic_expr::LogicExpr};
 
@@ -40,6 +40,12 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAssignmentStatement 
         }
 
         desired_type
+    }
+}
+
+impl LibrettoEvaluator for LogicAssignmentStatement {
+    fn evaluate(&self, runtime: &mut LibrettoRuntime) -> LibrettoRuntimeResult {
+        todo!()
     }
 }
 

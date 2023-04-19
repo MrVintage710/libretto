@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use crate::{lson::{Lson, LsonType}, lexer::{LibrettoLogicToken, LogicOrdinal, LibrettoTokenQueue}, parse_ast, compiler::{LibrettoCompiletime, LibrettoCompileError}};
-use super::{logic_equality_expr::LogicEqualityExpr, LibrettoParsable, LibrettoEvaluator};
+use crate::{lson::{Lson, LsonType}, lexer::{LibrettoLogicToken, LogicOrdinal, LibrettoTokenQueue}, parse_ast, compiler::{LibrettoCompiletime, LibrettoCompileError}, runtime::{LibrettoRuntimeResult, LibrettoEvaluator}};
+use super::{logic_equality_expr::LogicEqualityExpr, LibrettoParsable};
 
 pub struct LogicExpr {
     expr : LogicEqualityExpr,
@@ -40,16 +40,16 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicExpr {
 }
 
 impl LibrettoEvaluator for LogicExpr {
-    fn evaluate(&self, runtime: &mut crate::runtime::LibrettoRuntime) -> Lson {
-        let value = self.expr.evaluate(runtime);
+    fn evaluate(&self, runtime: &mut crate::runtime::LibrettoRuntime) -> LibrettoRuntimeResult {
+        let value = self.expr.evaluate(runtime)?;
         if let Lson::None = &value {
             if self.default.is_some() {
-                self.default.as_ref().unwrap().clone()
+                Ok(self.default.as_ref().unwrap().clone())
             } else {
-                Lson::None
+                Ok(Lson::None)
             }
         } else {
-            value
+            Ok(value)
         }
     }
 }

@@ -51,6 +51,18 @@ impl LibrettoRuntime {
     }
 }
 
+pub trait LibrettoEvaluator {
+    fn evaluate(&self, runtime: &mut LibrettoRuntime) -> LibrettoRuntimeResult;
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum LibrettoRuntimeError {
+    #[error("There is no assignable variable with the identifier '{0}'")]
+    VariableNotDefined(String),
+}
+
+pub type LibrettoRuntimeResult = Result<Lson, LibrettoRuntimeError>;
+
 #[cfg(test)]
 mod tests {
 
