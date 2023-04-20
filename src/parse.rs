@@ -129,7 +129,7 @@ pub mod test_util {
     pub fn evaluate_expr<'a, T : LibrettoParsable<'a, LibrettoLogicToken> + LibrettoEvaluator>(
         source: &'a str,
         lson : Lson
-    ) {
+    ) -> LibrettoRuntime {
         let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
         let mut compile_time = LibrettoCompiletime::with_data([
             (String::from("foo"), LsonType::Float),
@@ -146,5 +146,6 @@ pub mod test_util {
         let result = ast.evaluate(&mut runtime).unwrap();
         assert_eq!(ast_type, result.get_type());
         assert_eq!(result, lson);
+        runtime
     }
 }

@@ -49,6 +49,10 @@ impl LibrettoRuntime {
     pub fn insert_data(&mut self, ident : &str, value : Lson) {
         self.current_scope.data.insert(ident.to_string(), value);
     }
+
+    pub fn has_data(&self, ident : &str) -> bool {
+        self.current_scope.has_data(ident)
+    }
 }
 
 pub trait LibrettoEvaluator {

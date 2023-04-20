@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{lexer::{LibrettoTokenQueue, LibrettoLogicToken, LogicOrdinal}, lson::LsonType, compiler::{LibrettoCompiletime, LibrettoCompileError}};
+use crate::{lexer::{LibrettoTokenQueue, LibrettoLogicToken, LogicOrdinal}, lson::{LsonType, Lson}, compiler::{LibrettoCompiletime, LibrettoCompileError}, runtime::{LibrettoEvaluator, LibrettoRuntime, LibrettoRuntimeResult}};
 use crate::parse::util::TypedIdentifier;
 use super::{logic_equality_expr::LogicEqualityExpr, LibrettoParsable, logic_assignment_stmt::LogicAssignmentStatement, util::KeyValuePair, logic_expr::LogicExpr};
 
@@ -63,6 +63,18 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicLetStatement {
     }
 }
 
+impl LibrettoEvaluator for LogicLetStatement {
+    fn evaluate(&self, runtime: &mut LibrettoRuntime) -> LibrettoRuntimeResult {
+        if let Some(lhs) = &self.value {
+            let ident = self.identifier.ident();
+            let value = lhs.evaluate(runtime)?;
+            runtime.insert_data(ident, value);
+        }
+
+        Ok(Lson::None)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -94,5 +106,12 @@ mod tests {
         validate_expr::<LogicLetStatement>("let test : bool = 2.0;", 1, LsonType::None);
         validate_expr::<LogicLetStatement>("let test : bool;", 0, LsonType::None);
         validate_expr::<LogicLetStatement>("let test = false;", 0, LsonType::None);
+    }
+
+    #[test]
+    fn evaluate_let_stmt() {
+        let rt = evaluate_expr::<LogicLetStatement>("let test : float = 2.0;", Lson::None);
+        assert!(rt.has_data("test"));
+        assert_eq!(rt.get_data("test"), Lson::Float(2.0));
     }
 }
