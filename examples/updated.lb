@@ -3,10 +3,6 @@
     request quest_manager;
 
     let quest = quest_manager.getQuest("Ballad of the Bard");
-
-    enum MajorQuestFlag {
-        
-    }
     
     function honorific() {
         return player.is_female ? "Miss" : "Sir";

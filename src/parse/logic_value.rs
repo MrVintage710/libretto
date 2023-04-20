@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::{
-    util::{CommaSeparatedList, KeyValuePair}, LibrettoParsable, logic_equality_expr::LogicEqualityExpr,
+    util::{CommaSeparatedList, KeyValuePair}, LibrettoParsable, logic_equality_expr::LogicEqualityExpr, logic_expr::LogicExpr,
 };
 use crate::{
     lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal},
@@ -78,7 +78,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for Lson {
             ArrayTerm::<'a>::raw_check(queue) &&
             queue.next_is(LogicOrdinal::RightBracket)
         } else if queue.next_is(LogicOrdinal::LeftParen) {
-            LogicEqualityExpr::raw_check(queue) && queue.next_is(LogicOrdinal::RightParen)
+            LogicExpr::raw_check(queue) && queue.next_is(LogicOrdinal::RightParen)
 //            if ArrayTerm::<'a>::raw_check(queue) &&
 //            queue.next_is(LogicOrdinal::RightParen){
 //                queue.next_is(LogicOrdinal::Arrow);
