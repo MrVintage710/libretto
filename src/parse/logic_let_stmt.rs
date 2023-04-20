@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{lexer::{LibrettoTokenQueue, LibrettoLogicToken, LogicOrdinal}, lson::LsonType, compiler::LibrettoCompiletime};
+use crate::{lexer::{LibrettoTokenQueue, LibrettoLogicToken, LogicOrdinal}, lson::LsonType, compiler::{LibrettoCompiletime, LibrettoCompileError}};
 use crate::parse::util::TypedIdentifier;
 use super::{logic_equality_expr::LogicEqualityExpr, LibrettoParsable, logic_assignment_stmt::LogicAssignmentStatement, util::KeyValuePair, logic_expr::LogicExpr};
 
@@ -40,7 +40,26 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicLetStatement {
     }
 
     fn validate(&self, compile_time : &mut LibrettoCompiletime) -> LsonType {
-        todo!()
+        let ident = self.identifier.ident();
+        let declared_type = self.identifier.validate(compile_time);
+        let rhs_type = if let Some(rhs) = &self.value {
+            rhs.validate(compile_time)
+        } else {
+            LsonType::None
+        };
+
+        match (declared_type, rhs_type) {
+            (LsonType::None, LsonType::None) => compile_time.push_error(LibrettoCompileError::TypeNotExplicit(ident.to_string())),
+            (_, LsonType::None) => compile_time.insert_variable_type(ident, declared_type),
+            (LsonType::None, _) => compile_time.insert_variable_type(ident, rhs_type),
+            _ => {
+                if declared_type != rhs_type {
+                    compile_time.push_error(LibrettoCompileError::AssignmentStatementTypeMismatch(declared_type.to_string(), rhs_type.to_string()));
+                }
+            }
+        }
+
+        LsonType::None
     }
 }
 
@@ -67,5 +86,13 @@ mod tests {
         let ast = parse_expr::<LogicLetStatement>("let test : bool;");
         assert_eq!(ast.value, None);
         assert_eq!(ast.identifier, parse_expr::<TypedIdentifier>("test : bool"))
+    }
+
+    #[test]
+    fn validate_let_stmt() {
+        validate_expr::<LogicLetStatement>("let test;", 1, LsonType::None);
+        validate_expr::<LogicLetStatement>("let test : bool = 2.0;", 1, LsonType::None);
+        validate_expr::<LogicLetStatement>("let test : bool;", 0, LsonType::None);
+        validate_expr::<LogicLetStatement>("let test = false;", 0, LsonType::None);
     }
 }

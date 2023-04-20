@@ -28,7 +28,7 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAssignmentStatement 
     }
 
     fn validate(&self, compile_time : &mut LibrettoCompiletime) -> LsonType {
-        let desired_type = compile_time.get_data(&self.ident);
+        let desired_type = compile_time.get_variable_type(&self.ident);
         let value_type = self.value.validate(compile_time);
 
         if desired_type == LsonType::None {

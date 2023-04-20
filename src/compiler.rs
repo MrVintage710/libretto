@@ -26,7 +26,7 @@ impl LibrettoCompiletime {
         }
     }
 
-    pub fn get_data(&self, key : &str) -> LsonType {
+    pub fn get_variable_type(&self, key : &str) -> LsonType {
         self.current_scope.get_data(key)
     }
     
@@ -42,7 +42,7 @@ impl LibrettoCompiletime {
         }
     }
 
-    pub fn insert_data(&mut self, ident : &str, value : LsonType) {
+    pub fn insert_variable_type(&mut self, ident : &str, value : LsonType) {
         self.current_scope.data.insert(ident.to_string(), value);
     }
 
@@ -52,6 +52,14 @@ impl LibrettoCompiletime {
 
     pub fn push_error(&mut self, value: LibrettoCompileError) {
         self.errors.push(value)
+    }
+
+    pub fn has_variable_type(&self, ident : &str) -> bool {
+        self.current_scope.has_data(ident)
+    }
+
+    pub fn variable_depth(&self, ident : &str) -> i32 {
+        self.current_scope.data_depth(ident)
     }
 }
 
@@ -77,4 +85,10 @@ pub enum LibrettoCompileError {
     
     #[error("Cannot assign value to undeclared variable '{0}'.")]
     AssignmentWithUndeclaredVariable(String),
+    
+    #[error("When decalring variable '{0}', its type is not explicit.")]
+    TypeNotExplicit(String),
+    
+    #[error("When parsing the expression, the declared type ({0}) did not match the derived type ({1}).")]
+    AssignmentStatementTypeMismatch(String, String),
 }

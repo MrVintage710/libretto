@@ -46,7 +46,7 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
         match self {
             LogicValue::Literal(lson) => lson.validate(compile_time),
             LogicValue::Variable(value) => {
-                return compile_time.get_data(value);
+                return compile_time.get_variable_type(value);
             },
         }
     }

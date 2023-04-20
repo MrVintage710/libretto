@@ -22,6 +22,47 @@ impl <T> LibrettoScope<T> where T: Clone + Default {
         T::default()
     }
 
+    pub fn replace_data(&mut self, ident : &str, value : T) -> bool {
+        if self.data.contains_key(ident) {
+            self.data.insert(ident.to_string(), value);
+            return true;
+        }
+
+        if self.parrent.is_some() {
+            return self.parrent.as_mut().unwrap().replace_data(ident, value);
+        }
+
+        false
+    }
+
+    pub fn has_data(&self, ident : &str) -> bool {
+        if self.data.contains_key(ident) {
+            return true;
+        }
+
+        if self.parrent.is_some() {
+            return self.parrent.as_ref().unwrap().has_data(ident);
+        }
+
+        false
+    }
+
+    pub fn data_depth(&self, ident : &str) -> i32 {
+        self.check_depth(ident, 0)
+    }
+
+    fn check_depth(&self, ident : &str, current_depth : i32) -> i32 {
+        if self.data.contains_key(ident) {
+            return current_depth;
+        }
+
+        if self.parrent.is_some() {
+            return self.parrent.as_ref().unwrap().check_depth(ident, current_depth + 1);
+        }
+
+        -1
+    }
+
     pub fn depth(&self) -> u32 {
         if let Some(parrent) = &self.parrent {
             parrent.depth() + 1
