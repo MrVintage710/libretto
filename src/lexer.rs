@@ -430,6 +430,9 @@ pub enum LibrettoLogicToken {
 
     #[token(":")]
     Colon,
+    
+    #[token(";")]
+    Semicolon,
 
     #[token("!=", priority = 2)]
     InverseEquality,

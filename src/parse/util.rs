@@ -8,6 +8,57 @@ use logos::Logos;
 use std::{fmt::Debug, marker::PhantomData};
 
 //==================================================================================================
+//          Logic Typed Identifier
+//==================================================================================================
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct TypedIdentifier {
+    implicit_type: Option<LsonType>,
+    ident: String
+}
+
+impl TypedIdentifier {
+    pub fn implicit_type(&self) -> Option<LsonType> {
+        self.implicit_type
+    }
+
+    pub fn ident(&self) -> &str {
+        self.ident.as_ref()
+    }
+}
+
+impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for TypedIdentifier {
+    fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
+        if queue.next_is(LogicOrdinal::Identifier) {
+            queue.next_is(LogicOrdinal::Colon) && LsonType::raw_check(queue);
+            true
+        } else {
+            false
+        }
+    }
+
+    fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, compile_time : &mut LibrettoCompiletime) -> Option<Self> {
+        if let Some(LibrettoLogicToken::Identifier(ident)) = queue.pop() {
+            let implicit_type = {
+                if queue.pop_if_next_is(LogicOrdinal::Colon).is_some() {
+                    LsonType::parse(queue, compile_time)
+                } else {
+                    None
+                }
+            };
+
+            Some(TypedIdentifier { implicit_type, ident })
+        } else {
+            None
+        }
+    }
+
+    fn validate(&self, compile_time : &mut LibrettoCompiletime) -> LsonType {
+        self.implicit_type.unwrap_or(LsonType::None)
+    }
+}
+
+//==================================================================================================
 //          Key Value Pair
 //==================================================================================================
 
@@ -209,5 +260,30 @@ pub mod tests {
     #[test]
     fn check_logic_key_value_pair() {
         check_expr::<KeyValuePair<Lson, LibrettoLogicToken>>("key : \"value\"", 3);
+    }
+
+    #[test]
+    fn check_typed_ident() {
+        check_expr::<TypedIdentifier>("test", 1);
+        check_expr::<TypedIdentifier>("some_bool : bool", 3);
+        check_expr::<TypedIdentifier>("some_float : float", 3);
+        check_expr::<TypedIdentifier>("some_string : string", 3);
+    }
+
+    #[test]
+    fn parse_typed_ident() {
+        let ast = parse_expr::<TypedIdentifier>("test");
+        assert_eq!(ast.ident, "test".to_string());
+        assert_eq!(ast.implicit_type, None);
+
+        let ast = parse_expr::<TypedIdentifier>("some_bool : bool");
+        assert_eq!(ast.ident, "some_bool".to_string());
+        assert_eq!(ast.implicit_type, Some(LsonType::Bool));
+    }
+
+    #[test]
+    fn validate_typed_ident() {
+        validate_expr::<TypedIdentifier>("test", 0, LsonType::None);
+        validate_expr::<TypedIdentifier>("some_bool : bool", 0, LsonType::Bool);
     }
 }

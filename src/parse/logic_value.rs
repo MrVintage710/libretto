@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
 use super::{
-    util::{CommaSeparatedList, KeyValuePair}, LibrettoParsable, LibrettoEvaluator, logic_equality_expr::LogicEqualityExpr,
+    util::{CommaSeparatedList, KeyValuePair}, LibrettoParsable, logic_equality_expr::LogicEqualityExpr,
 };
 use crate::{
     lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal, Ordinal},
     lson::{Lson, LsonType},
-    parse_ast, runtime::LibrettoRuntime, compiler::LibrettoCompiletime,
+    parse_ast, runtime::{LibrettoRuntime, LibrettoEvaluator, LibrettoRuntimeResult}, compiler::LibrettoCompiletime,
 };
 
 #[derive(Debug, PartialEq)]
@@ -46,17 +46,17 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicValue {
         match self {
             LogicValue::Literal(lson) => lson.validate(compile_time),
             LogicValue::Variable(value) => {
-                return compile_time.get_data(value);
+                return compile_time.get_variable_type(value);
             },
         }
     }
 }
 
 impl LibrettoEvaluator for LogicValue {
-    fn evaluate(&self, runtime: &mut LibrettoRuntime) -> Lson {
+    fn evaluate(&self, runtime: &mut LibrettoRuntime) -> LibrettoRuntimeResult {
         match self {
-            LogicValue::Literal(value) => value.clone(),
-            LogicValue::Variable(ident) => runtime.get_data(ident).clone(),
+            LogicValue::Literal(value) => Ok(value.clone()),
+            LogicValue::Variable(ident) => Ok(runtime.get_data(ident).clone()),
         }
     }
 }

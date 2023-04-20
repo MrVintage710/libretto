@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use crate::{lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal}, parse_ast, lson::Lson, runtime::LibrettoRuntime, compiler::{LibrettoCompiletime, LibrettoCompileError}};
+use crate::{lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal}, parse_ast, lson::Lson, runtime::{LibrettoRuntime, LibrettoEvaluator, LibrettoRuntimeResult}, compiler::{LibrettoCompiletime, LibrettoCompileError}};
 use crate::lson::LsonType;
-use super::{logic_value::LogicValue, LibrettoParsable, LibrettoEvaluator};
+use super::{logic_value::LogicValue, LibrettoParsable};
 
 //==================================================================================================
 //          Logic Unary Expression
@@ -84,15 +84,15 @@ impl<'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicUnaryExpr {
 }
 
 impl LibrettoEvaluator for LogicUnaryExpr {
-    fn evaluate(&self, runtime: &mut LibrettoRuntime) -> Lson {
-        let value = self.value.evaluate(runtime);
+    fn evaluate(&self, runtime: &mut LibrettoRuntime) -> LibrettoRuntimeResult {
+        let value = self.value.evaluate(runtime)?;
         if let Some(op) = &self.operator {
             match op {
-                UnaryOperator::Negative => -value,
-                UnaryOperator::Bang => !value,
+                UnaryOperator::Negative => Ok(-value),
+                UnaryOperator::Bang => Ok(!value),
             }
         } else {
-            value
+            Ok(value)
         }
 
     }

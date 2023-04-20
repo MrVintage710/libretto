@@ -4,8 +4,7 @@ use crate::compiler::{LibrettoCompiletime, LibrettoCompileError};
 use crate::lexer::{LibrettoLogicToken, LibrettoTokenQueue, LogicOrdinal};
 use crate::lson::{LsonType, Lson};
 use crate::parse_ast;
-use crate::runtime::LibrettoRuntime;
-use super::LibrettoEvaluator;
+use crate::runtime::{LibrettoRuntime, LibrettoEvaluator, LibrettoRuntimeResult};
 use super::logic_factor_expr::LogicFactorExpr;
 use super::LibrettoParsable;
 
@@ -108,16 +107,16 @@ fn get_term_type(lhs : &LsonType, op : &TermOperator, rhs : &LsonType) -> LsonTy
 }
 
 impl LibrettoEvaluator for LogicTermExpr {
-    fn evaluate(&self, runtime: &mut LibrettoRuntime) -> Lson {
-        let mut v1 = self.lhs.evaluate(runtime);
+    fn evaluate(&self, runtime: &mut LibrettoRuntime) -> LibrettoRuntimeResult {
+        let mut v1 = self.lhs.evaluate(runtime)?;
         for (op, rhs) in &self.rhs {
-            let v2 = rhs.evaluate(runtime);
+            let v2 = rhs.evaluate(runtime)?;
             match op {
                 TermOperator::Plus => v1 = v1 + v2,
                 TermOperator::Minus => v1 = v1 - v2,
             };
         }
-        v1
+        Ok(v1)
     }
 }
 

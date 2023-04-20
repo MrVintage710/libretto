@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::compiler::{LibrettoCompileError, LibrettoCompiletime};
 use crate::lexer::{LibrettoLogicToken, LogicOrdinal };
 use crate::lson::{LsonType, Lson};
-use super::LibrettoEvaluator;
+use crate::runtime::{LibrettoEvaluator, LibrettoRuntimeResult};
 use super::{logic_term_expr::LogicTermExpr, LibrettoParsable};
 
 #[derive(Debug, PartialEq)]
@@ -91,12 +91,12 @@ fn get_comaprison_type(lhs : &LsonType, op : &ComparisonOperator, rhs : &LsonTyp
 }
 
 impl LibrettoEvaluator for LogicComparisonExpr {
-    fn evaluate(&self, runtime: &mut crate::runtime::LibrettoRuntime) -> crate::lson::Lson {
+    fn evaluate(&self, runtime: &mut crate::runtime::LibrettoRuntime) -> LibrettoRuntimeResult {
         let mut cardnality = true;
-        let mut v1 = self.lhs.evaluate(runtime);
+        let mut v1 = self.lhs.evaluate(runtime)?;
         if !self.rhs.is_empty() {
             for (op, rhs) in &self.rhs {
-                let v2 = rhs.evaluate(runtime);
+                let v2 = rhs.evaluate(runtime)?;
                 match op {
                     ComparisonOperator::LessThan => if !(v1 < v2) { cardnality = false },
                     ComparisonOperator::GreaterThan => if !(v1 > v2) { cardnality = false },
@@ -105,9 +105,9 @@ impl LibrettoEvaluator for LogicComparisonExpr {
                 };
                 v1 = v2;
             }
-            Lson::Bool(cardnality)
+            Ok(Lson::Bool(cardnality))
         } else {
-            v1
+            Ok(v1)
         }
     }
 }

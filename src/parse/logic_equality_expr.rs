@@ -3,8 +3,7 @@ use std::collections::HashMap;
 use crate::compiler::{LibrettoCompiletime, LibrettoCompileError};
 use crate::lexer::{LibrettoLogicToken, LogicOrdinal, LibrettoTokenQueue };
 use crate::lson::{LsonType, Lson};
-use crate::runtime::LibrettoRuntime;
-use super::{LibrettoEvaluator};
+use crate::runtime::{LibrettoRuntime, LibrettoEvaluator, LibrettoRuntimeResult};
 use super::logic_comparison_expr::LogicComparisonExpr;
 use super::{logic_term_expr::LogicTermExpr, LibrettoParsable};
 
@@ -87,21 +86,21 @@ fn get_equality_type(lhs : &LsonType, op : &EqualityOperator, rhs : &LsonType) -
 }
 
 impl LibrettoEvaluator for LogicEqualityExpr {
-    fn evaluate(&self, runtime: &mut LibrettoRuntime) -> Lson {
+    fn evaluate(&self, runtime: &mut LibrettoRuntime) -> LibrettoRuntimeResult {
         let mut cardnality = true;
-        let mut v1 = self.lhs.evaluate(runtime);
+        let mut v1 = self.lhs.evaluate(runtime)?;
         if !self.rhs.is_empty() {
             for (op, rhs) in &self.rhs {
-                let v2 = rhs.evaluate(runtime);
+                let v2 = rhs.evaluate(runtime)?;
                 match op {
                     EqualityOperator::EqualTo => if !(v1 == v2) { cardnality = false },
                     EqualityOperator::NotEqualTo => if !(v1 != v2) { cardnality = false }
                 };
                 v1 = v2;
             }
-            Lson::Bool(cardnality)
+            Ok(Lson::Bool(cardnality))
         } else {
-            v1
+            Ok(v1)
         }
     }
 }

@@ -57,14 +57,6 @@ where
     }
 }
 
-//==================================================================================================
-//          Evaluator
-//==================================================================================================
-
-pub trait LibrettoEvaluator {
-    fn evaluate(&self, runtime: &mut LibrettoRuntime) -> Lson;
-}
-
 #[macro_export]
 macro_rules! parse_ast {
     ($type:ty, $queue:expr, $compile_time:expr) => {
@@ -87,9 +79,9 @@ pub mod test_util {
     use crate::compiler::LibrettoCompiletime;
     use crate::lson::{LsonType, Lson};
     use crate::lexer::{LibrettoLogicToken, LibrettoTokenQueue};
-    use crate::runtime::LibrettoRuntime;
+    use crate::runtime::{LibrettoRuntime, LibrettoEvaluator};
 
-    use super::{LibrettoParsable, LibrettoEvaluator};
+    use super::{LibrettoParsable};
 
     pub fn check_expr<'a, T: LibrettoParsable<'a, LibrettoLogicToken>>(
         source: &'a str,
@@ -137,7 +129,7 @@ pub mod test_util {
     pub fn evaluate_expr<'a, T : LibrettoParsable<'a, LibrettoLogicToken> + LibrettoEvaluator>(
         source: &'a str,
         lson : Lson
-    ) {
+    ) -> LibrettoRuntime {
         let mut queue = LibrettoTokenQueue::from(LibrettoLogicToken::lexer(source));
         let mut compile_time = LibrettoCompiletime::with_data([
             (String::from("foo"), LsonType::Float),
@@ -151,8 +143,9 @@ pub mod test_util {
         assert!(ast.is_some());
         let ast = ast.unwrap();
         let ast_type = ast.validate(&mut compile_time);
-        let result = ast.evaluate(&mut runtime);
+        let result = ast.evaluate(&mut runtime).unwrap();
         assert_eq!(ast_type, result.get_type());
         assert_eq!(result, lson);
+        runtime
     }
 }
