@@ -12,7 +12,7 @@ pub struct LogicExpr {
 impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicExpr {
     fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
         let mut check = LogicEqualityExpr::raw_check(queue);
-        if queue.next_is(LogicOrdinal::Question) {
+        if check && queue.next_is(LogicOrdinal::Question) {
             check &= Lson::raw_check(queue);
         }
         check

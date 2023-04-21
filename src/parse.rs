@@ -7,6 +7,7 @@ mod logic_term_expr;
 mod logic_factor_expr;
 mod logic_comparison_expr;
 mod logic_equality_expr;
+mod logic_stmt;
 mod util;
 
 use logos::Logos;

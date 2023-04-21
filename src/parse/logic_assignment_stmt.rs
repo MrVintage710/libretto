@@ -13,7 +13,8 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAssignmentStatement 
     fn raw_check(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>) -> bool {
         queue.next_is(LogicOrdinal::Identifier) &&
         queue.next_is(LogicOrdinal::Equals) &&
-        LogicExpr::raw_check(queue)
+        LogicExpr::raw_check(queue) &&
+        queue.next_is(LogicOrdinal::Semicolon)
     }
 
     fn parse(queue: &mut LibrettoTokenQueue<'a, LibrettoLogicToken>, compile_time : &mut LibrettoCompiletime) -> Option<Self> {
@@ -24,6 +25,7 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicAssignmentStatement 
         };
         queue.pop();
         let value = parse_ast!(LogicExpr, queue, compile_time);
+        queue.pop();
         Some(LogicAssignmentStatement{ident, value})
     }
 
@@ -62,19 +64,19 @@ mod tests {
 
     #[test]
     fn check_assign_stmt() {
-        check_expr::<LogicAssignmentStatement>("test = 2", 3);
-        check_expr::<LogicAssignmentStatement>("test = layer ? true", 5);
+        check_expr::<LogicAssignmentStatement>("test = 2;", 3);
+        check_expr::<LogicAssignmentStatement>("test = layer ? true;", 5);
     }
 
     #[test]
     fn parse_assign_stmt() {
-        let ast = parse_expr::<LogicAssignmentStatement>("test = 2");
+        let ast = parse_expr::<LogicAssignmentStatement>("test = 2;");
     }
 
     #[test]
     fn validate_assign_stmt() {
-        validate_expr::<LogicAssignmentStatement>("test = 2", 2, LsonType::None);
-        validate_expr::<LogicAssignmentStatement>("bar = 2", 1, LsonType::Bool);
-        validate_expr::<LogicAssignmentStatement>("foo = 2.0", 0, LsonType::Float);
+        validate_expr::<LogicAssignmentStatement>("test = 2;", 2, LsonType::None);
+        validate_expr::<LogicAssignmentStatement>("bar = 2;", 1, LsonType::Bool);
+        validate_expr::<LogicAssignmentStatement>("foo = 2.0;", 0, LsonType::Float);
     }
 }
