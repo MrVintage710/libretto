@@ -39,8 +39,9 @@ where
     fn validate(&self, compile_time : &mut LibrettoCompiletime) -> LsonType;
 
     fn check(queue: &mut LibrettoTokenQueue<'a, T>) -> bool {
+        queue.mark();
         if Self::raw_check(queue) {
-            queue.mark();
+            queue.advance();
             true
         } else {
             queue.rewind();

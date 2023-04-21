@@ -1,7 +1,7 @@
 use logos::{Lexer, Logos};
 use crate::lson::LsonType;
 use peekmore::{PeekMore, PeekMoreIterator};
-use std::{fmt::Debug, marker::PhantomData};
+use std::{fmt::Debug, marker::PhantomData, collections::VecDeque};
 use strum::EnumDiscriminants;
 
 //==================================================================================================
@@ -16,6 +16,7 @@ where
 {
     iterator: PeekMoreIterator<Lexer<'a, T>>,
     cursor: usize,
+    marks : VecDeque<usize>
 }
 
 impl<'a, T> From<Lexer<'a, T>> for LibrettoTokenQueue<'a, T>
@@ -27,6 +28,7 @@ where
         LibrettoTokenQueue {
             iterator: value.peekmore(),
             cursor: 0,
+            marks : VecDeque::new()
         }
     }
 }
@@ -63,12 +65,19 @@ where
     T::Extras: Clone,
 {
     pub fn rewind(&mut self) {
-        self.cursor = 0;
+        match self.marks.pop_front() {
+            Some(value) => self.cursor = value,
+            None => {},
+        }
     }
 
     pub fn mark(&mut self) {
+        self.marks.push_front(self.cursor);
+    }
+
+    pub fn advance(&mut self) {
         self.iterator.advance_cursor_by(self.cursor);
-        self.cursor = 0
+        self.cursor = 0;
     }
 
     pub fn reset(&mut self) {

@@ -15,9 +15,11 @@ impl <'a> LibrettoParsable<'a, LibrettoLogicToken> for LogicStmt {
     }
 
     fn parse(queue: &mut crate::lexer::LibrettoTokenQueue<'a, LibrettoLogicToken>, compile_time : &mut crate::compiler::LibrettoCompiletime) -> Option<Self> {
-        if LogicExpr::raw_check(queue) && queue{
-            let 
-        }
+//        if LogicExpr::raw_check(queue) && queue{
+//            let
+//        }
+
+        None
     }
 
     fn validate(&self, compile_time : &mut crate::compiler::LibrettoCompiletime) -> crate::lson::LsonType {

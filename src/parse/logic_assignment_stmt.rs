@@ -64,8 +64,8 @@ mod tests {
 
     #[test]
     fn check_assign_stmt() {
-        check_expr::<LogicAssignmentStatement>("test = 2;", 3);
-        check_expr::<LogicAssignmentStatement>("test = layer ? true;", 5);
+        check_expr::<LogicAssignmentStatement>("test = 2;", 4);
+        check_expr::<LogicAssignmentStatement>("test = layer ? true;", 6);
     }
 
     #[test]
