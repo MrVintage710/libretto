@@ -2,6 +2,7 @@
 ![libretto_logo](https://user-images.githubusercontent.com/8060151/232897806-94c5dbd3-43f2-43f5-a75a-e3b82cdd6af3.png#gh-dark-mode-only)
 ![libretto_logo_lighttheme](https://user-images.githubusercontent.com/8060151/232899181-b97f8041-5641-4eca-954e-498083681d0b.png#gh-light-mode-only)
 
+**THIS IS STILL WIP and is missing some key features! I am working on the in conjunction with a game. More updates to come!**
 
 # Libretto Scripting Language
 
