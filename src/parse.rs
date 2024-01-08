@@ -12,14 +12,44 @@ mod util;
 
 use logos::Logos;
 use std::{
-    fmt::Debug, collections::HashMap,
+    fmt::Debug, collections::{HashMap, VecDeque, vec_deque::Iter},
 };
 use thiserror::Error;
 
 use crate::{
     lson::{LsonType, Lson},
-    lexer::{LibrettoTokenQueue, Ordinal}, runtime::LibrettoRuntime, compiler::LibrettoCompiletime,
+    lexer::{LibrettoTokenQueue, Ordinal, LibrettoLogicToken}, runtime::LibrettoRuntime, compiler::LibrettoCompiletime, queue::TokenQueue,
 };
+
+pub enum CheckResult<'a, T>
+where
+    T: Logos<'a> + PartialEq + Clone + Ordinal + Debug
+{
+    Pass(TokenQueue<'a, T>, Box<dyn Parsable<'a, T>>),
+    Fail
+}
+
+pub trait Checkable<'a, T>
+where
+    T: Logos<'a> + PartialEq + Clone + Ordinal + Debug
+{
+    fn check(queue : &mut TokenQueue<'a, T>) -> CheckResult<'a, T>;
+}
+
+pub trait Parsable<'a, T>
+where
+    T: Logos<'a> + PartialEq + Clone + Ordinal + Debug
+{
+    fn parse(tokens : TokenQueue<'a, T>) -> Option<Box<dyn Evaluator>>  {}
+}
+
+pub struct NullParsable {}
+
+impl Parsable for NullParsable {}
+
+pub struct GroupParsable {
+    parables : Vec<Box<dyn Parsable>>
+}
 
 //==================================================================================================
 //          LibrettoParsable
